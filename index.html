@@ -789,7 +789,7 @@ function saveSession() {
 }
 function loadSession() {
   if (!db.session) { // 예전 기기 저장분 옮겨 오기
-    try { const old = JSON.parse(localStorage.getItem(SESS)); if (old) { db.session = old; localStorage.removeItem(SESS); saveLocal(); } } catch (e) {}
+    try { const old = JSON.parse(localStorage.getItem(SESS)); if (old) { old.device = old.device || deviceName(); db.session = old; localStorage.removeItem(SESS); save(); } } catch (e) {}
   }
   return db.session || null;
 }
@@ -1398,7 +1398,7 @@ function applyUpdateIfIdle() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
 setInterval(() => { if (document.visibilityState === "visible") checkUpdate(); }, 5 * 60 * 1000);
 
-load(); home(); syncNow(); checkUpdate();
+load(); loadSession(); home(); syncNow(); checkUpdate();
 </script>
 </body>
 </html>
