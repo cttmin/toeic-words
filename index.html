@@ -228,7 +228,7 @@ const STEPS = [
 ];
 function stepRows(fn, total) {
   return [1, 2, 3].map(n => `
-    <button class="step" ${total >= (n === 2 ? 2 : 1) ? "" : "disabled"} onclick="${fn}(${n})">
+    <button class="step" ${total ? "" : "disabled"} onclick="${fn}(${n})">
       <span class="num">${pad(n)}</span>
       <span><div class="label">Step ${pad(n)}</div><div class="en">${STEPS[n].en}</div><div class="ko">${STEPS[n].ko}</div></span>
       <span class="go">→</span>
