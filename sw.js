@@ -1,9 +1,9 @@
 ﻿/*
-  ?ㅽ봽?쇱씤 ?뚯씪.
-  ?명꽣?룹씠 ?섎㈃ ??긽 ???뚯씪??諛쏆븘 ?ㅺ퀬(???⑥뼱 諛붾줈 諛섏쁺),
-  ???섎㈃ 留덉?留됱쑝濡?諛쏆븘 ???뚯씪濡??쎈땲??
+  오프라인 파일.
+  인터넷이 되면 항상 새 파일을 받아 오고(새 단어 바로 반영),
+  안 되면 마지막으로 받아 둔 파일로 엽니다.
 */
-const CACHE = "toeic-words-v2";
+const CACHE = "toeic-words-v3";
 const SHELL = ["./", "index.html", "words.js", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon.png"];
 
@@ -23,15 +23,16 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   const same = url.origin === location.origin;
   const font = url.hostname === "cdn.jsdelivr.net";
-  if (!same && !font) return; // ?숆린??媛숈? ?ㅻⅨ 二쇱냼??嫄대뱶由ъ? ?딆쓬
+  if (!same && !font) return; // 동기화 같은 다른 주소는 건드리지 않음
 
-  if (font) { // 湲瑗? ??踰?諛쏆쑝硫?怨꾩냽 ?
+  if (font) { // 글꼴: 한 번 받으면 계속 씀
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
       const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res;
     })));
     return;
   }
-  // ???뚯씪: ?명꽣??癒쇱?, ???섎㈃ ??ν빐 ??寃?  e.respondWith(fetch(req, { cache: "no-cache" }).then(res => {
+  // 앱 파일: 인터넷 먼저, 안 되면 저장해 둔 것
+  e.respondWith(fetch(req, { cache: "no-cache" }).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match("index.html"))));
