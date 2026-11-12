@@ -10,6 +10,9 @@
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>TOEIC Words</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   /* iOS 시스템 색 */
@@ -327,7 +330,8 @@ function home() {
         <span class="grow">별표 단어</span><span class="detail">${m}</span>${ICON.chev}
       </button>
     </div>
-    <div class="sf">틀리거나 별표한 단어가 여기에 모여요.</div>`);
+    <div class="sf">틀리거나 별표한 단어가 여기에 모여요.</div>
+    ${installRow()}`);
 }
 function setCount(d) { db.count = Math.max(1, Math.min(200, db.count + d)); save(); home(); }
 function toggleDay(i) {
@@ -638,6 +642,25 @@ function importData(input) {
     catch (e) { alert("백업 파일을 읽지 못했어요."); }
   });
 }
+
+/* ---------- 앱처럼 설치 ---------- */
+let installEvt = null;
+const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (!S) home(); });
+window.addEventListener("appinstalled", () => { installEvt = null; if (!S) home(); });
+function installRow() {
+  if (standalone()) return "";
+  if (installEvt) return `<div class="group" style="margin-top:30px"><button class="cell ico" onclick="installApp()">
+      <span class="ic" style="background:var(--indigo)">${ICON.book}</span><span class="grow">앱으로 설치</span>${ICON.chev}</button></div>
+    <div class="sf">설치하면 아이콘이 생기고 자기 창으로 열려요.</div>`;
+  if (isIOS()) return `<div class="group" style="margin-top:30px"><div class="cell ico">
+      <span class="ic" style="background:var(--indigo)">${ICON.book}</span><span class="grow two"><div>앱으로 설치</div>
+      <div class="sub" style="white-space:normal">사파리 공유 버튼 → 홈 화면에 추가</div></span></div></div>`;
+  return "";
+}
+async function installApp() { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; home(); }
+if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js");
 
 load(); home();
 </script>
