@@ -771,14 +771,27 @@ function studyBar() {
   return navbar(textBtn("닫기", "back()"), `Step ${S.step}`, `<span class="bar-txt">${S.i + 1} / ${n}</span>`, false) +
     `<div class="progress"><div style="width:${((S.i + 1) / n) * 100}%"></div></div>`;
 }
-/* ---------- 이어서 하기: 공부 중인 자리를 이 기기에 저장 ---------- */
-const SESS = "toeic-words-session";
+/* ---------- 이어서 하기: 공부 중인 자리를 기록에 저장 (동기화 켜면 다른 기기에서도 보임) ---------- */
+const SESS = "toeic-words-session"; // 예전엔 기기 안에만 저장했음
+function deviceName() {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "아이패드";
+  if (/iPhone|iPod/.test(ua)) return "아이폰";
+  if (/Android/.test(ua)) return /Mobile/.test(ua) ? "폰" : "태블릿";
+  return "컴퓨터";
+}
 function saveSession() {
   if (!S) return;
-  try { localStorage.setItem(SESS, JSON.stringify({ step: S.step, keys: S.list.map(keyOf), i: S.i, wrong: S.wrong.map(keyOf), fromNotes: S.fromNotes, at: Date.now() })); } catch (e) {}
+  db.session = { step: S.step, keys: S.list.map(keyOf), i: S.i, wrong: S.wrong.map(keyOf), fromNotes: S.fromNotes, at: Date.now(), device: deviceName() };
+  save();
 }
-function loadSession() { try { return JSON.parse(localStorage.getItem(SESS)); } catch (e) { return null; } }
-function clearSession() { try { localStorage.removeItem(SESS); } catch (e) {} }
+function loadSession() {
+  if (!db.session) { // 예전 기기 저장분 옮겨 오기
+    try { const old = JSON.parse(localStorage.getItem(SESS)); if (old) { db.session = old; localStorage.removeItem(SESS); saveLocal(); } } catch (e) {}
+  }
+  return db.session || null;
+}
+function clearSession() { if (db.session) { db.session = null; save(); } try { localStorage.removeItem(SESS); } catch (e) {} }
 function resume() {
   const s = loadSession(); if (!s) return home();
   const map = new Map(allItems().map(it => [keyOf(it), it]));
@@ -796,7 +809,7 @@ function resumeRow() {
   return `<div class="group" style="margin-top:16px">
       <button class="cell ico" onclick="resume()">
         <span class="ic" style="background:var(--tint)">${ICON.play}</span>
-        <span class="grow two"><div>이어서 하기</div><div class="sub">Step ${s.step} · ${s.i + 1} / ${s.keys.length} · ${when}에 멈춤</div></span>${ICON.chev}
+        <span class="grow two"><div>이어서 하기</div><div class="sub">Step ${s.step} · ${s.i + 1} / ${s.keys.length} · ${when}${s.device && s.device !== deviceName() ? ` ${s.device}에서` : ""} 멈춤</div></span>${ICON.chev}
       </button>
       <button class="cell danger" style="--inset:57px;font-size:15px" onclick="dropSession()">지우기</button>
     </div>`;
