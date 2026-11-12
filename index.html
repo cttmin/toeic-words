@@ -229,6 +229,8 @@
   .alert .ab button:active { background: rgba(127,127,127,.15); }
   .alert .ab .b { font-weight: 600; }
   .alert .ab .danger { color: var(--red); }
+  .alert .ab.col { flex-direction: column; }
+  .alert .ab.col button + button { box-shadow: 0 -.5px 0 var(--sep); }
   .alert .am { white-space: pre-line; }
   .alert .af { padding: 0 16px 16px; margin-top: -4px; }
   .alert .af input { width: 100%; height: 34px; padding: 0 8px; border: .5px solid var(--sep); border-radius: 7px;
@@ -433,7 +435,7 @@ function iosDialog({ title, message = "", input = null, buttons }) {
       <div class="at">${esc(title)}</div>
       ${message ? `<div class="am">${esc(message)}</div>` : `<div style="height:16px"></div>`}
       ${input ? `<div class="af"><input type="text" id="dlgIn" value="${esc(input.value || "")}" placeholder="${esc(input.placeholder || "")}" autocomplete="off" enterkeyhint="done"></div>` : ""}
-      <div class="ab">${buttons.map((b, i) => `<button data-i="${i}" class="${b.bold ? "b" : ""} ${b.danger ? "danger" : ""}">${esc(b.label)}</button>`).join("")}</div>
+      <div class="ab ${buttons.length > 2 ? "col" : ""}">${buttons.map((b, i) => `<button data-i="${i}" class="${b.bold ? "b" : ""} ${b.danger ? "danger" : ""}">${esc(b.label)}</button>`).join("")}</div>
     </div></div>`);
     const box = $("#dlg"), inp = $("#dlgIn");
     const done = v => { box.remove(); resolve(v); };
@@ -1279,13 +1281,38 @@ async function connectCode() {
   if (!raw) return;
   const code = cleanCode(raw);
   if (code.replace(/-/g, "").length < 20) return tell("코드가 짧아요", "다시 확인해 주세요.");
-  try {
-    const remote = await remoteGet(code);
-    if (!remote) return tell("코드를 찾지 못했어요", "다시 확인해 주세요.");
-    if (!await askOK("기록 바꾸기", "이 기기의 기록을 동기화된 기록으로 바꿀까요?", "바꾸기")) return;
-    sync = { code, last: Date.now() }; saveSync();
-    applyRemote(remote.data); syncScreen();
-  } catch (e) { tell("연결하지 못했어요", "인터넷 연결을 확인해 주세요."); }
+  if (code === sync.code) return tell("이미 이 코드로 연결돼 있어요");
+  let remote;
+  try { remote = await remoteGet(code); } catch (e) { return tell("연결하지 못했어요", "인터넷 연결을 확인해 주세요."); }
+  if (!remote) return tell("코드를 찾지 못했어요", "다시 확인해 주세요.");
+  const how = await iosDialog({ title: "기록 합치기", message: "이 기기의 기록과 코드의 기록을\n어떻게 할까요?", buttons: [
+    { label: "둘 다 합치기", value: "merge", bold: true },
+    { label: "코드 기록으로 바꾸기", value: "replace" },
+    { label: "취소", value: null }] });
+  if (!how) return;
+  sync = { code, last: Date.now() }; saveSync();
+  if (how === "replace") applyRemote(remote.data);
+  else { db = mergeData(remote.data, db); normalize(); mergeWords(); save(); }
+  syncScreen();
+  tell("연결했어요", how === "merge" ? "두 기기의 별표 · ✓ · 단어가 합쳐졌어요." : "");
+}
+// 두 기록 합치기: 별표 · ✓ · 직접 넣은 단어 · Day 는 모두 살리고, 이어서 하기는 더 최근 것
+function mergeData(a, b) {
+  const out = JSON.parse(JSON.stringify(a)), uni = (x, y) => [...new Set([...(x || []), ...(y || [])])];
+  out.marked = uni(a.marked, b.marked);
+  out.known = uni(a.known, b.known).filter(k => !out.marked.includes(k)); // 한쪽이라도 별표면 아직 모르는 단어
+  out.seen = uni(a.seen, b.seen); out.removed = uni(a.removed, b.removed);
+  out.picked = uni(a.picked, b.picked);
+  out.chapterAlias = Object.assign({}, b.chapterAlias, a.chapterAlias);
+  out.days = out.days || [];
+  for (const d of b.days || []) {
+    const same = out.days.find(x => x.name === d.name);
+    if (!same) { out.days.push(JSON.parse(JSON.stringify(d))); continue; }
+    for (const it of d.items) if (!same.items.some(x => keyOf(x) === keyOf(it))) same.items.push(it);
+  }
+  const sa = a.session, sb = b.session;
+  out.session = !sa ? sb || null : !sb ? sa : (sa.at >= sb.at ? sa : sb);
+  return out;
 }
 async function stopSync() {
   if (!await askOK("동기화 끄기", "이 기기만 동기화를 꺼요.\n다른 기기와 지금까지의 기록은 그대로예요.", "끄기", true)) return;
@@ -1318,6 +1345,9 @@ function syncScreen() {
         sync.err ? esc(sync.err) : sync.last ? timeText(sync.last) + "에 맞춤" : "맞추는 중…"}</span></div>
       <button class="cell tint" onclick="syncNow()">지금 맞추기</button>
     </div>
+    <div class="sh">다른 기기와 코드가 다르면</div>
+    <div class="group"><button class="cell tint" onclick="connectCode()">다른 코드로 연결</button></div>
+    <div class="sf">다른 기기에 나온 코드를 넣으면 그 코드로 옮겨 가요. 이 기기 기록은 합칠 수 있어요.</div>
     <div class="group" style="margin-top:30px"><button class="cell danger center" onclick="stopSync()">이 기기 동기화 끄기</button></div>`);
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
