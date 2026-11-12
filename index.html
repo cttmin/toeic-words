@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TOEIC Words</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root { --ink: #111111; --paper: #ffffff; --mute: #8a8a8a; --line: #efefef; --soft: #d6d6d6; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: Inter, Pretendard, -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-weight: 500; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button {
+    background: var(--paper); border: 1px solid var(--ink); border-radius: 10px;
+    padding: 12px 16px; cursor: pointer; transition: background .2s ease-out, color .2s ease-out, border-color .2s ease-out;
+  }
+  button:active { background: var(--line); }
+  button.solid { background: var(--ink); color: var(--paper); }
+  button.ghost { border-color: transparent; color: var(--mute); padding: 6px 4px; background: none; }
+  button:disabled { opacity: .3; cursor: default; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%; border: 1px solid var(--soft); border-radius: 10px; padding: 12px; background: var(--paper);
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--ink); }
+  textarea { min-height: 140px; resize: vertical; font-size: 14px; }
+  .muted { color: var(--mute); }
+  .small { font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .grow { flex: 1; }
+  .hide { display: none !important; }
+  .label { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+
+  /* 머리 */
+  .brand { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  .brand h1 { font-size: 13px; font-weight: 600; letter-spacing: .18em; margin: 0; }
+  .brand .ko { font-size: 13px; color: var(--mute); margin-top: 2px; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; margin: 32px 0 8px; }
+
+  /* Day */
+  .day { display: flex; align-items: center; gap: 12px; padding: 14px 2px; border-bottom: 1px solid var(--line); cursor: pointer; user-select: none; }
+  .box { width: 20px; height: 20px; border: 1px solid var(--ink); border-radius: 5px; flex: none; position: relative; transition: background .2s ease-out; }
+  .on > .box, .box.on { background: var(--ink); }
+  .on > .box::after, .box.on::after { content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px;
+    border: solid var(--paper); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .day .name { font-weight: 600; }
+
+  /* STEP */
+  .step { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 4px 12px; width: 100%;
+    text-align: left; padding: 18px 2px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
+  .step:first-of-type { border-top: 1px solid var(--ink); }
+  .step:active { background: var(--line); }
+  .step .num { font-size: 32px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+  .step .en { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .step .ko { font-size: 13px; color: var(--mute); }
+  .step .go { color: var(--mute); font-size: 18px; }
+
+  /* 오답노트 입구 */
+  .note-in { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left;
+    padding: 16px; margin-top: 32px; border-color: var(--soft); }
+  .note-in b { font-weight: 600; }
+
+  /* 공부 */
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .bar { height: 2px; background: var(--line); margin-bottom: 30px; }
+  .bar > div { height: 100%; background: var(--ink); transition: width .25s ease-out; }
+  .card { animation: in .25s ease-out; }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .word { font-size: 36px; font-weight: 600; letter-spacing: -0.03em; margin: 0; line-height: 1.15; }
+  .meaning { font-size: 17px; margin: 4px 0 26px; color: var(--mute); }
+  .sent { font-size: 20px; line-height: 1.55; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .trans { font-size: 16px; color: #444; margin: 0 0 20px; }
+  mark { background: none; color: inherit; border-bottom: 2px solid var(--ink); }
+  .blank { display: inline-block; min-width: 64px; border-bottom: 2px solid var(--ink); }
+  .say { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+  .say button { padding: 8px 12px; font-size: 14px; border-color: var(--soft); }
+  .nav { display: flex; gap: 8px; }
+  .nav button { flex: 1; }
+
+  .star { border: 0; padding: 6px; margin: -6px -6px 0 0; background: none; color: var(--mute); flex: none; line-height: 0; }
+  .star:active { background: none; }
+  .star svg { width: 22px; height: 22px; display: block; transition: transform .2s ease-out; }
+  .star path { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; transition: fill .2s ease-out; }
+  .star.on { color: var(--ink); }
+  .star.on path { fill: currentColor; }
+  .star.on svg { transform: scale(1.08); }
+  .ask { display: flex; gap: 8px; margin-top: 10px; }
+  .ask button { flex: 1; padding: 10px; }
+
+  .choices { display: grid; gap: 8px; margin-top: 18px; }
+  .choices button { text-align: left; line-height: 1.45; border-color: var(--soft); }
+  .choices button.right { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .choices button.wrong { border-color: var(--mute); color: var(--mute); text-decoration: line-through; }
+
+  .feedback { min-height: 24px; margin: 14px 0; font-size: 15px; }
+  .field { margin: 10px 0; }
+  .field label { display: block; font-size: 13px; color: var(--mute); margin-bottom: 4px; }
+
+  .list .item { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; }
+  .list .item .t { flex: 1; min-width: 0; }
+  .list .item .s { font-size: 13px; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .end { font-size: 44px; font-weight: 600; letter-spacing: -0.04em; margin: 48px 0 4px; }
+  .wide { width: 100%; }
+  .stack > * + * { margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script src="words.js"></script>
+<script>
+/* ---------- 저장 ---------- */
+const KEY = "toeic-words-v1";
+let db;
+const keyOf = it => it.word.toLowerCase() + "||" + it.sentence;
+
+function load() {
+  try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; }
+  if (!db || !Array.isArray(db.days)) db = { days: [], count: 10, picked: ["Day 1"], seen: [] };
+  if (!db.marked) db.marked = [];
+  if (!db.seen) db.seen = db.days.flatMap(d => d.items.map(it => d.name + "||" + it.word.toLowerCase()));
+  mergeWords();
+  save();
+}
+// words.js 에 새로 생긴 단어만 앱에 넣기 (앱에서 지운 건 다시 안 넣음)
+function mergeWords() {
+  if (typeof WORDS === "undefined") return;
+  for (const d of WORDS) {
+    let day = db.days.find(x => x.name === d.day);
+    for (const a of d.items) {
+      const k = d.day + "||" + a[0].trim().toLowerCase();
+      if (db.seen.includes(k)) continue;
+      if (!day) { day = { name: d.day, items: [] }; db.days.push(day); }
+      day.items.push(toItem(a)); db.seen.push(k);
+    }
+  }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+function toItem(a) {
+  return { word: a[0].trim(), meaning: (a[1] || "").trim(), sentence: (a[2] || "").trim(),
+           translation: (a[3] || "").trim(), chunk: (a[4] || "").trim() || guessChunk(a[1], a[3]) };
+}
+function guessChunk(meaning, translation) {
+  meaning = (meaning || "").split(/[,;/]/)[0].trim();
+  const stem = meaning.replace(/(하다|되다|시키다|이다|한|하게|적인|적으로)$/, "");
+  return translation && stem && translation.includes(stem) ? stem : "";
+}
+
+/* ---------- 도우미 ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const norm = s => String(s).toLowerCase().replace(/[\s.,'’"!?~·-]/g, "");
+const pad = n => String(n).padStart(2, "0");
+const allItems = () => db.days.flatMap(d => d.items);
+
+function formInSentence(it) {
+  const w = it.word.toLowerCase();
+  const tries = [w, w.replace(/e$/, ""), w.replace(/y$/, "i"), w.slice(0, Math.max(3, w.length - 2))];
+  for (const t of tries) {
+    const m = it.sentence.match(new RegExp("\\b(" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[a-z]*)", "i"));
+    if (m) return m[1];
+  }
+  return null;
+}
+function markSentence(it) {
+  const f = formInSentence(it); const s = esc(it.sentence);
+  return f ? s.replace(esc(f), "<mark>" + esc(f) + "</mark>") : s;
+}
+const hasChunk = it => it.chunk && it.translation.includes(it.chunk);
+function markTranslation(it, blank) {
+  const t = esc(it.translation);
+  if (!hasChunk(it)) return t;
+  return t.replace(esc(it.chunk), blank ? '<span class="blank">&nbsp;</span>' : "<mark>" + esc(it.chunk) + "</mark>");
+}
+
+/* ---------- 오답노트 ---------- */
+const isMarked = it => db.marked.includes(keyOf(it));
+function setMark(it, on) {
+  const k = keyOf(it);
+  db.marked = db.marked.filter(x => x !== k);
+  if (on) db.marked.push(k);
+  save();
+}
+function markedItems() {
+  const map = new Map(allItems().map(it => [keyOf(it), it]));
+  return db.marked.map(k => map.get(k)).filter(Boolean);
+}
+const STAR = `<svg viewBox="0 0 24 24"><path d="M12 3.6l2.55 5.2 5.75.84-4.16 4.05.98 5.72L12 16.7l-5.12 2.7.98-5.72L3.7 9.64l5.75-.84z"/></svg>`;
+function flagHTML(it, onclick = "toggleFlag(this)") {
+  return `<button class="star ${isMarked(it) ? "on" : ""}" aria-label="별표" onclick="${onclick}">${STAR}</button>`;
+}
+function toggleFlag(el) {
+  const it = S.list[S.i]; const on = !isMarked(it); setMark(it, on);
+  el.classList.toggle("on", on);
+}
+
+/* ---------- 발음 ---------- */
+let voice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter(v => /^en(-|_)/i.test(v.lang));
+  const pref = [/natural/i, /google us english/i, /samantha/i, /aria|jenny|guy/i, /en-us/i];
+  for (const p of pref) { const v = vs.find(v => p.test(v.name) || p.test(v.lang)); if (v) return (voice = v); }
+  voice = vs[0] || null;
+}
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text, rate = 0.95) {
+  if (!("speechSynthesis" in window)) return alert("이 브라우저는 읽어 주기를 지원하지 않아요.");
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) u.voice = voice; u.lang = voice ? voice.lang : "en-US"; u.rate = rate;
+  speechSynthesis.speak(u);
+}
+
+/* ---------- 처음 화면 ---------- */
+const STEPS = [
+  null,
+  { en: "Read & Listen", ko: "예문 보고 듣기" },
+  { en: "Choose", ko: "해석 4개 중 고르기" },
+  { en: "Fill in", ko: "빈칸 해석 쓰기" },
+];
+function stepRows(fn, total) {
+  return [1, 2, 3].map(n => `
+    <button class="step" ${total >= (n === 2 ? 2 : 1) ? "" : "disabled"} onclick="${fn}(${n})">
+      <span class="num">${pad(n)}</span>
+      <span><div class="label">Step ${pad(n)}</div><div class="en">${STEPS[n].en}</div><div class="ko">${STEPS[n].ko}</div></span>
+      <span class="go">→</span>
+    </button>`).join("");
+}
+function brand(right) {
+  return `<div class="brand"><div><h1>TOEIC WORDS</h1><div class="ko">예문으로 외우는 토익 단어.</div></div>${right}</div>`;
+}
+function home() {
+  S = null;
+  const total = pickedItems().length;
+  const m = markedItems().length;
+  $("#app").innerHTML = brand(`<button class="ghost" onclick="manage()">단어 넣기</button>`) + `
+    <div class="sec"><span class="label">Day</span><span class="muted small">여러 개 고르면 섞여요</span></div>
+    <div>${db.days.map((d, i) => `
+      <div class="day ${db.picked.includes(d.name) ? "on" : ""}" onclick="toggleDay(${i})">
+        <div class="box"></div><div class="name grow">${esc(d.name)}</div>
+        <div class="muted small">${d.items.length}</div>
+      </div>`).join("")}
+    </div>
+    <div class="sec"><span class="label">한 번에</span></div>
+    <div class="row">
+      <input type="number" min="1" max="200" value="${db.count}" style="width:88px"
+        onchange="db.count=Math.max(1,parseInt(this.value)||10);save();home()">
+      <span class="muted small">개 · 고른 단어 ${total}개 중 ${Math.min(db.count, total)}개</span>
+    </div>
+    <div class="sec"><span class="label">Step</span></div>
+    ${stepRows("start", total)}
+    <button class="note-in" onclick="notes()"><span class="row"><span class="star on" style="margin:0;padding:0">${STAR}</span><b>별표 단어</b></span><span>${m}</span></button>`;
+}
+function toggleDay(i) {
+  const n = db.days[i].name;
+  db.picked = db.picked.includes(n) ? db.picked.filter(x => x !== n) : db.picked.concat(n);
+  save(); home();
+}
+function pickedItems() {
+  return db.days.filter(d => db.picked.includes(d.name)).flatMap(d => d.items.filter(it => it.sentence));
+}
+
+/* ---------- 오답노트 화면 ---------- */
+function notes() {
+  S = null;
+  const list = markedItems();
+  $("#app").innerHTML = `
+    <div class="brand"><div><h1>STARRED</h1><div class="ko">틀렸거나 별표한 단어. 다 외우면 별을 끄세요.</div></div>
+      <button class="ghost" onclick="home()">닫기</button></div>
+    <div class="sec"><span class="label">Step</span><span class="muted small">${list.length}개 전부 · 섞어서</span></div>
+    ${stepRows("startNotes", list.length)}
+    <div class="sec"><span class="label">단어</span></div>
+    <div class="list">${list.length ? list.map((it, i) => `
+      <div class="item"><div class="t"><div>${esc(it.word)} <span class="muted">${esc(it.meaning)}</span></div>
+        <div class="s">${esc(it.sentence)}</div></div>
+        ${flagHTML(it, `unmark(${i})`)}</div>`).join("")
+      : `<p class="muted">아직 비어 있어요. 틀리면 여기 모여요.</p>`}
+    </div>`;
+}
+function unmark(i) { setMark(markedItems()[i], false); notes(); }
+function startNotes(step) { start(step, shuffle(markedItems()), true); }
+
+/* ---------- 공부 ---------- */
+let S = null;
+function start(step, list, fromNotes) {
+  let items = list;
+  if (!items) {
+    items = pickedItems();
+    if (step !== 1 || db.picked.length > 1) items = shuffle(items);
+    items = items.slice(0, db.count);
+  }
+  S = { step, list: items, i: 0, wrong: [], answered: false, fromNotes: !!fromNotes };
+  show();
+}
+function back() { S && S.fromNotes ? notes() : home(); }
+function topBar() {
+  const n = S.list.length;
+  return `<div class="top"><button class="ghost" onclick="back()">그만하기</button>
+    <span class="label">Step ${pad(S.step)} · ${STEPS[S.step].en}</span>
+    <span class="muted small">${S.i + 1} / ${n}</span></div>
+    <div class="bar"><div style="width:${(S.i / n) * 100}%"></div></div>`;
+}
+function show() {
+  if (S.i >= S.list.length) return finish();
+  S.answered = false;
+  const it = S.list[S.i];
+  if (S.step === 1) step1(it); else if (S.step === 2) step2(it); else step3(it);
+}
+function next() { S.i++; show(); }
+function prev() { if (S.i > 0) { S.i--; show(); } }
+function missed(it) { if (!S.wrong.includes(it)) S.wrong.push(it); setMark(it, true); }
+
+function step1(it) {
+  $("#app").innerHTML = topBar() + `
+    <div class="card">
+      <div class="card-head"><p class="word">${esc(it.word)}</p>${flagHTML(it)}</div>
+      <p class="meaning">${esc(it.meaning)}</p>
+      <p class="sent">${markSentence(it)}</p>
+      <p class="trans">${markTranslation(it)}</p>
+      <div class="say">
+        <button onclick="say(S.list[S.i].word)">단어 듣기</button>
+        <button onclick="say(S.list[S.i].sentence)">예문 듣기</button>
+        <button onclick="say(S.list[S.i].sentence, 0.7)">천천히</button>
+      </div>
+      <div class="nav">
+        <button onclick="prev()" ${S.i ? "" : "disabled"}>이전</button>
+        <button class="solid" onclick="next()">다음</button>
+      </div>
+    </div>`;
+  say(it.sentence);
+}
+
+// 헷갈리는 보기: 정답 해석에서 단어 뜻만 다른 단어 뜻으로 바꾼 문장
+function distractors(it) {
+  const pool = allItems(); const out = new Set();
+  if (hasChunk(it)) {
+    const chunks = shuffle([...new Set(pool.map(p => p.chunk).filter(c => c && c !== it.chunk))]);
+    for (const c of chunks) { if (out.size >= 3) break; out.add(it.translation.replace(it.chunk, c)); }
+  }
+  for (const p of shuffle(pool)) { if (out.size >= 3) break; if (p.translation && p.translation !== it.translation) out.add(p.translation); }
+  return [...out].slice(0, 3);
+}
+function step2(it) {
+  S.opts = shuffle([it.translation, ...distractors(it)]);
+  $("#app").innerHTML = topBar() + `
+    <div class="card">
+      <div class="card-head"><p class="sent">${markSentence(it)}</p>${flagHTML(it)}</div>
+      <div class="say"><button onclick="say(S.list[S.i].sentence)">예문 듣기</button></div>
+      <div class="choices">${S.opts.map((o, k) => `<button onclick="choose(${k})">${esc(o)}</button>`).join("")}</div>
+      <div class="feedback" id="fb"></div>
+      <div class="nav"><button class="solid hide" id="nx" onclick="next()">다음</button></div>
+    </div>`;
+}
+function choose(k) {
+  if (S.answered) return; S.answered = true;
+  const it = S.list[S.i]; const ok = S.opts[k] === it.translation;
+  document.querySelectorAll(".choices button").forEach((b, j) => {
+    if (S.opts[j] === it.translation) b.classList.add("right"); else if (j === k) b.classList.add("wrong");
+  });
+  if (!ok) { missed(it); refreshFlag(it); }
+  $("#fb").innerHTML = ok ? "맞았어요." : `<span class="muted">${esc(it.word)} = ${esc(it.meaning)}</span>`;
+  $("#nx").classList.remove("hide");
+}
+function refreshFlag(it) { const f = $(".card .star"); if (f) f.classList.toggle("on", isMarked(it)); }
+
+function answerOf(it) { return hasChunk(it) ? it.chunk : guessChunk(it.meaning, it.meaning) || it.meaning; }
+function step3(it) {
+  $("#app").innerHTML = topBar() + `
+    <div class="card">
+      <div class="card-head"><p class="sent">${markSentence(it)}</p>${flagHTML(it)}</div>
+      <div class="say"><button onclick="say(S.list[S.i].sentence)">예문 듣기</button></div>
+      <p class="trans">${hasChunk(it) ? markTranslation(it, true) : "<span class='muted'>밑줄 친 단어의 뜻을 써 보세요.</span>"}</p>
+      <div class="field"><input type="text" id="a" autocomplete="off" placeholder="빈칸에 들어갈 해석"></div>
+      <div class="feedback" id="fb"></div>
+      <div class="nav">
+        <button id="hint" onclick="hint()">힌트</button>
+        <button class="solid" id="go" onclick="check()">확인</button>
+      </div>
+    </div>`;
+  const a = $("#a"); a.focus();
+  a.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) check(); });
+}
+function hint() {
+  const ans = answerOf(S.list[S.i]);
+  $("#fb").innerHTML = `<span class="muted">${esc(ans[0])}${" _".repeat(ans.length - 1)}</span>`;
+}
+/* 채점: 맞음 · 비슷함(한 번 더 묻기) · 틀림 */
+// 한글을 자모로 풀기: "제출" → ㅈㅔㅊㅜㄹ (맞춤법 한두 글자 틀린 걸 잡으려고)
+function jamo(s) {
+  const L = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ", V = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ",
+        T = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ";
+  let out = "";
+  for (const ch of s) {
+    const c = ch.charCodeAt(0) - 0xac00;
+    if (c < 0 || c > 11171) { out += ch; continue; }
+    out += L[Math.floor(c / 588)] + V[Math.floor((c % 588) / 28)] + (c % 28 ? T[c % 28] : "");
+  }
+  return out;
+}
+// 답(a)이 입력(v) 안 어딘가에 거의 그대로 들어 있는지: 가장 적게 고친 횟수
+function nearDist(a, v) {
+  let prev = new Array(v.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= v.length; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === v[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return Math.min(...prev);
+}
+function grade(it, input) {
+  const v = norm(input); if (!v) return "wrong";
+  const answers = [answerOf(it), ...it.meaning.split(/[,;/]/)].map(norm).filter(Boolean);
+  const stems = answers.map(a => a.replace(/(하다|되다|시키다)$/, "")).filter(Boolean);
+  if (answers.some(a => v === a) || stems.some(s => v.includes(s))) return "right";
+  for (const s of stems.concat(answers)) {
+    const a = jamo(s), d = nearDist(a, jamo(v));
+    if (d <= Math.max(1, Math.floor(a.length * 0.34))) return "close";
+  }
+  return "wrong";
+}
+function check() {
+  if (S.answered === "asking") return;
+  if (S.answered) return next();
+  const it = S.list[S.i]; const g = grade(it, $("#a").value);
+  if (g === "close") {
+    S.answered = "asking";
+    $("#fb").innerHTML = `<div>비슷해요. 정답은 <b>${esc(answerOf(it))}</b> <span class="muted">(${esc(it.meaning)})</span></div>
+      <div class="ask"><button class="solid" onclick="settle(true)">맞은 걸로</button><button onclick="settle(false)">모르는 걸로</button></div>`;
+    $("#hint").classList.add("hide"); $("#go").classList.add("hide");
+    return;
+  }
+  settle(g === "right");
+}
+function settle(ok) {
+  const it = S.list[S.i];
+  S.answered = true;
+  if (!ok) { missed(it); refreshFlag(it); }
+  $("#fb").innerHTML = ok ? "맞았어요." : `<span class="muted">정답 · ${esc(answerOf(it))} (${esc(it.meaning)})</span>`;
+  $("#app .trans").innerHTML = markTranslation(it);
+  $("#hint").classList.add("hide");
+  $("#go").classList.remove("hide");
+  $("#go").textContent = "다음";
+}
+
+function finish() {
+  const n = S.list.length, w = S.wrong.length;
+  $("#app").innerHTML = `
+    <div class="top"><button class="ghost" onclick="back()">처음으로</button><span class="label">Step ${pad(S.step)}</span><span></span></div>
+    <p class="end">${S.step === 1 ? "Done." : `${n - w} / ${n}`}</p>
+    <p class="muted">${S.step === 1 ? n + "개 봤어요." : w ? `틀린 ${w}개는 오답노트에 있어요.` : "다 맞았어요."}</p>
+    <div class="stack" style="margin-top:28px">
+      ${w ? `<button class="solid wide" onclick="start(${S.step}, shuffle(S.wrong), S.fromNotes)">틀린 ${w}개만 다시</button>` : ""}
+      ${S.step < 3 ? `<button class="wide" onclick="start(${S.step + 1}, shuffle(S.list), S.fromNotes)">같은 단어로 Step ${pad(S.step + 1)}</button>` : ""}
+      <button class="wide" onclick="start(${S.step}, shuffle(S.list), S.fromNotes)">한 번 더</button>
+    </div>`;
+}
+
+/* ---------- 단어 넣기 ---------- */
+let curDay = 0;
+function manage() {
+  if (!db.days.length) db.days.push({ name: "Day 1", items: [] });
+  if (curDay >= db.days.length) curDay = 0;
+  const d = db.days[curDay];
+  $("#app").innerHTML = `
+    <div class="brand"><div><h1>ADD WORDS</h1><div class="ko">단어 넣기.</div></div><button class="ghost" onclick="home()">닫기</button></div>
+    <div class="row">
+      <select class="grow" onchange="curDay=+this.value;manage()">
+        ${db.days.map((x, i) => `<option value="${i}" ${i === curDay ? "selected" : ""}>${esc(x.name)} · ${x.items.length}개</option>`).join("")}
+      </select>
+      <button onclick="addDay()">새 Day</button>
+    </div>
+
+    <div class="sec"><span class="label">하나씩</span></div>
+    <div class="field"><label>단어</label><input type="text" id="f0" placeholder="submit" autocapitalize="off"></div>
+    <div class="field"><label>뜻</label><input type="text" id="f1" placeholder="제출하다"></div>
+    <div class="field"><label>예문</label><input type="text" id="f2" placeholder="All applicants must submit their résumés by Friday."></div>
+    <div class="field"><label>해석</label><input type="text" id="f3" placeholder="모든 지원자는 금요일까지 이력서를 제출해야 합니다."></div>
+    <div class="field"><label>해석 속 단어 뜻 <span class="small">(비우면 알아서 찾아요)</span></label><input type="text" id="f4" placeholder="제출"></div>
+    <button class="solid wide" onclick="addOne()">${esc(d.name)}에 넣기</button>
+
+    <div class="sec"><span class="label">여러 개 한꺼번에</span><span class="muted small">엑셀에서 복사해 붙여도 돼요</span></div>
+    <textarea id="bulk" placeholder="한 줄에 하나씩, | 나 탭으로 나눠서&#10;단어 | 뜻 | 예문 | 해석 | 해석 속 단어 뜻&#10;&#10;submit | 제출하다 | All applicants must submit their résumés by Friday. | 모든 지원자는 금요일까지 이력서를 제출해야 합니다. | 제출"></textarea>
+    <button class="wide" style="margin-top:8px" onclick="addBulk()">${esc(d.name)}에 한꺼번에 넣기</button>
+
+    <div class="sec"><span class="label">${esc(d.name)} · ${d.items.length}</span></div>
+    <div class="list">${d.items.map((it, k) => `
+      <div class="item"><div class="t"><div>${esc(it.word)} <span class="muted">${esc(it.meaning)}</span></div>
+        <div class="s">${esc(it.sentence)}</div></div>
+        <button class="ghost" onclick="delItem(${k})">지우기</button></div>`).join("")}
+    </div>
+    <div class="row" style="margin-top:16px; flex-wrap: wrap">
+      <button class="ghost" onclick="renameDay()">이름 바꾸기</button>
+      <button class="ghost" onclick="delDay()">이 Day 지우기</button>
+      <span class="grow"></span>
+      <button class="ghost" onclick="exportData()">백업 받기</button>
+      <button class="ghost" onclick="$('#imp').click()">백업 넣기</button>
+      <input type="file" id="imp" accept=".json" class="hide" onchange="importData(this)">
+    </div>`;
+}
+function addDay() {
+  const name = prompt("새 Day 이름", "Day " + (db.days.length + 1));
+  if (!name) return;
+  db.days.push({ name: name.trim(), items: [] }); curDay = db.days.length - 1; save(); manage();
+}
+function renameDay() {
+  const d = db.days[curDay]; const name = prompt("새 이름", d.name);
+  if (!name) return;
+  db.picked = db.picked.map(x => x === d.name ? name.trim() : x); d.name = name.trim(); save(); manage();
+}
+function delDay() {
+  const d = db.days[curDay];
+  if (!confirm(`${d.name}와 안의 단어 ${d.items.length}개를 지울까요?`)) return;
+  db.days.splice(curDay, 1); db.picked = db.picked.filter(x => x !== d.name); curDay = 0; save(); manage();
+}
+function addOne() {
+  const v = [0, 1, 2, 3, 4].map(i => $("#f" + i).value);
+  if (!v[0].trim() || !v[2].trim()) return alert("단어와 예문은 꼭 넣어 주세요.");
+  db.days[curDay].items.push(toItem(v)); save(); manage(); $("#f0").focus();
+}
+function addBulk() {
+  const lines = $("#bulk").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let n = 0;
+  for (const l of lines) {
+    const parts = l.includes("\t") ? l.split("\t") : l.split("|");
+    if (parts.length < 3 || !parts[0].trim()) continue;
+    db.days[curDay].items.push(toItem(parts)); n++;
+  }
+  save(); manage(); alert(n + "개 넣었어요.");
+}
+function delItem(k) {
+  const it = db.days[curDay].items[k];
+  if (!confirm(it.word + " 를 지울까요?")) return;
+  db.days[curDay].items.splice(k, 1); setMark(it, false); save(); manage();
+}
+function exportData() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: "application/json" }));
+  a.download = "toeic-words-backup.json"; a.click();
+}
+function importData(input) {
+  const f = input.files[0]; if (!f) return;
+  f.text().then(t => {
+    try { const d = JSON.parse(t); if (!Array.isArray(d.days)) throw 0; db = d; save(); load(); home(); }
+    catch (e) { alert("백업 파일을 읽지 못했어요."); }
+  });
+}
+
+load(); home();
+</script>
+</body>
+</html>
