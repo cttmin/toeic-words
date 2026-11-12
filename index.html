@@ -522,7 +522,7 @@ function wordsScreen() {
           ${days.map(d => `<option value="${esc(d.name)}" ${d === day ? "selected" : ""}>${esc(d.name)}</option>`).join("")}
         </select>${ICON.chev}</label>
     </div>
-    <div class="seg"><button class="${filter === "all" ? "on" : ""}" onclick="setWordsFilter('all')">전체 ${day.items.length}</button><button class="${filter === "unknown" ? "on" : ""}" onclick="setWordsFilter('unknown')">모르는 단어 ${day.items.length - nKnown}</button><button class="${filter === "known" ? "on" : ""}" onclick="setWordsFilter('known')">아는 단어 ${nKnown}</button></div>
+    <div class="seg"><button class="${filter === "all" ? "on" : ""}" onclick="setWordsFilter('all')">전체 ${day.items.length}</button><button class="${filter === "unknown" ? "on" : ""}" onclick="setWordsFilter('unknown')">모르는 단어 <span id="nUnknown">${day.items.length - nKnown}</span></button><button class="${filter === "known" ? "on" : ""}" onclick="setWordsFilter('known')">아는 단어 <span id="nKnown">${nKnown}</span></button></div>
     <div class="seg" style="margin-top:8px"><button class="${hide ? "" : "on"}" onclick="setHide(false)">뜻 보기</button><button class="${hide ? "on" : ""}" onclick="setHide(true)">뜻 가리기</button></div>
     <div class="sf">${hide ? "단어를 누르면 뜻이 보여요. " : ""}✓를 누르면 아는 단어가 되어 공부에서 빠져요.</div>
     <div class="group ${hide ? "hide-m" : ""}" style="margin-top:8px">${wItems.map((it, i) => `
@@ -547,6 +547,12 @@ function syncRow(el, it) {
   row.classList.toggle("is-known", isKnown(it));
   row.querySelector(".known").classList.toggle("on", isKnown(it));
   row.querySelector(".star").classList.toggle("on", isMarked(it));
+  // 위쪽 「모르는 단어 / 아는 단어」 개수도 바로 바꿈
+  const day = db.days.find(d => d.name === wDay);
+  if (day) {
+    const k = day.items.filter(isKnown).length;
+    $("#nKnown").textContent = k; $("#nUnknown").textContent = day.items.length - k;
+  }
 }
 function starWord(el, i) { const it = wItems[i]; setMark(it, !isMarked(it)); syncRow(el, it); }
 function knownWord(el, i) { const it = wItems[i]; setKnown(it, !isKnown(it)); syncRow(el, it); }
