@@ -171,6 +171,26 @@
   .spk svg { width: 20px; height: 20px; }
   .spk:active { opacity: .3; }
 
+  /* 단어 관리 */
+  .sf { white-space: pre-line; }
+  .nav .nt { overflow: hidden; text-overflow: ellipsis; max-width: 52vw; }
+  .bar-btn:disabled { color: var(--tertiary); opacity: 1; }
+  .minus { color: var(--red); flex: none; line-height: 0; }
+  .minus svg { width: 22px; height: 22px; }
+  .cell textarea.ta { min-height: 0; resize: none; padding: 11px 0; font-size: 17px; line-height: 1.35; overflow: hidden; }
+  .cell input { font-size: 17px; }
+
+  /* 아래에서 올라오는 창 (iOS 시트) */
+  .sheet-bg { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.28); animation: fade .25s ease-out; transition: opacity .25s ease-out; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: calc(env(safe-area-inset-top) + 12px); max-width: 600px; margin: 0 auto;
+    background: var(--bg); border-radius: 12px 12px 0 0; display: flex; flex-direction: column; animation: up .3s ease-out; transition: transform .25s ease-out;
+    box-shadow: 0 -1px 0 rgba(0,0,0,.04); }
+  .sheet .nav { position: static; margin: 0; padding: 6px 8px 0; border-radius: 12px 12px 0 0; background: var(--bg); box-shadow: 0 .5px 0 var(--sep); }
+  .sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 0 16px calc(40px + env(safe-area-inset-bottom)); }
+  .sheet-bg.out { opacity: 0; }
+  .sheet-bg.out .sheet { transform: translateY(100%); }
+  @keyframes up { from { transform: translateY(100%); } }
+
   /* 알림창 (UIAlertController) */
   .alert-bg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0,0,0,.2); animation: fade .2s ease-out; }
   .alert { width: 270px; border-radius: 14px; overflow: hidden; text-align: center; background: var(--alertbg);
@@ -212,6 +232,8 @@ const ICON = {
   star: `<svg viewBox="0 0 24 24"><path d="M12 3.4l2.62 5.32 5.88.86-4.25 4.14 1 5.85L12 16.8l-5.25 2.77 1-5.85L3.5 9.58l5.88-.86z"/></svg>`,
   starF: `<svg viewBox="0 0 24 24"><path d="M12 3.4l2.62 5.32 5.88.86-4.25 4.14 1 5.85L12 16.8l-5.25 2.77 1-5.85L3.5 9.58l5.88-.86z" fill="currentColor"/></svg>`,
   knownC: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.8 12.3l2.8 2.8 5.6-5.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+  minus: `<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="currentColor"/><rect x="6" y="10" width="10" height="2.2" rx="1.1" fill="#fff"/></svg>`,
   play: `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>`,
   speaker: `<svg viewBox="0 0 24 24"><path d="M3.5 9.2h3.3L11.5 5v14l-4.7-4.2H3.5z" fill="currentColor"/><path d="M15 8.6a4.8 4.8 0 010 6.8M17.6 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   tortoise: `<svg viewBox="0 0 24 24"><path d="M3.5 9.2h3.3L11.5 5v14l-4.7-4.2H3.5z" fill="currentColor"/><path d="M15 9.5a3.5 3.5 0 010 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
@@ -455,7 +477,7 @@ function home() {
   if (typeof updateWaiting !== "undefined" && updateWaiting) setTimeout(applyUpdateIfIdle, 0);
   const total = pickedItems().length;
   const m = markedItems().length;
-  render(navbar("", "", textBtn("단어 추가", "manage()"), false) + `
+  render(navbar("", "", textBtn("단어 관리", "manage()"), false) + `
     <h1 class="large">TOEIC Words</h1>
     ${resumeRow()}
 
@@ -896,101 +918,190 @@ function finish() {
     </div>`);
 }
 
-/* ---------- 단어 추가 ---------- */
-let curDay = 0, mChapter = null;
-function manage() {
-  S = null; screen = manage;
-  if (!db.days.length) db.days.push({ name: "Day 1", chapter: MY, items: [] });
+/* ---------- 단어 관리 (설정 앱처럼: 챕터 → Day → 단어) ---------- */
+let libCh = null, libDay = -1, libEdit = false;
+function manage() { libEdit = false; libraryScreen(); }
+function toggleLibEdit() { libEdit = !libEdit; screen(); }
+const editBtn = () => textBtn(libEdit ? "완료" : "편집", "toggleLibEdit()", libEdit);
+const minusBtn = () => `<span class="minus">${ICON.minus}</span>`;
+
+function libraryScreen() {
+  S = null; screen = libraryScreen; libEdit = false;
   const chs = chapters();
-  if (!chs.includes(mChapter)) mChapter = curChapter();
-  // 고른 챕터 안의 Day 만
-  if (!db.days[curDay] || db.days[curDay].chapter !== mChapter) curDay = db.days.findIndex(x => x.chapter === mChapter);
-  const d = db.days[curDay];
-  const field = (id, lab, ph, extra = "") => `<div class="cell"><span class="lab">${lab}</span><input type="text" id="${id}" placeholder="${esc(ph)}" ${extra}></div>`;
-  render(navbar(backBtn("홈", "home()"), "단어 추가", "") + `
+  render(navbar(backBtn("홈", "home()"), "단어 관리", "") + `
     <div class="sh">챕터</div>
+    <div class="group">${chs.map((c, i) => {
+      const days = db.days.filter(d => d.chapter === c);
+      const n = days.reduce((a, d) => a + d.items.length, 0);
+      return `<button class="cell ico" onclick="openChapter(${i})">
+        <span class="ic" style="background:var(--indigo)">${ICON.book}</span>
+        <span class="grow two"><div>${esc(c)}</div><div class="sub">Day ${days.length}개 · 단어 ${n}개</div></span>${ICON.chev}</button>`;
+    }).join("")}
+      <button class="cell ico tint" onclick="addChapter()"><span class="ic" style="background:var(--green)">${ICON.plus}</span><span class="grow">새 챕터</span></button>
+    </div>
+    <div class="sf">챕터 안에 Day가 있고, Day 안에 단어가 있어요.</div>
+
+    <div class="sh">백업</div>
     <div class="group">
-      <label class="cell"><span class="grow">챕터</span>
-        <select style="flex:none;width:auto;max-width:60%" onchange="pickManageChapter(this.value)">
-          ${chs.map((c, i) => `<option value="${i}" ${c === mChapter ? "selected" : ""}>${esc(c)}</option>`).join("")}
-        </select>${ICON.chev}</label>
-      <button class="cell tint" onclick="addChapter()">새 챕터 만들기</button>
-    </div>
-
-    <div class="sh">Day</div>
-    <div class="group">
-      <label class="cell"><span class="grow">Day</span>
-        <select style="flex:none;width:auto;max-width:60%" onchange="curDay=+this.value;manage()">
-          ${db.days.map((x, i) => x.chapter === mChapter ? `<option value="${i}" ${i === curDay ? "selected" : ""}>${esc(x.name)}</option>` : "").join("")}
-        </select>${ICON.chev}</label>
-      <button class="cell tint" onclick="addDay()">새 Day 만들기</button>
-    </div>
-    <div class="sf">「${esc(mChapter)}」 챕터에 넣어요.</div>
-
-    <div class="sh">하나씩</div>
-    <div class="group">
-      ${field("f0", "단어", "submit", 'autocapitalize="off" spellcheck="false"')}
-      ${field("f1", "뜻", "제출하다")}
-      ${field("f2", "예문", "All applicants must submit…")}
-      ${field("f3", "해석", "모든 지원자는 … 제출해야 합니다.")}
-      ${field("f4", "해석 속 뜻", "제출 (비워도 돼요)")}
-    </div>
-    <div class="sf">뜻에 「연장하다, 늘리다」처럼 쉼표로 적으면 둘 다 정답이 돼요.</div>
-    <div class="btns"><button class="btn" onclick="addOne()">${esc(d.name)}에 추가</button></div>
-
-    <div class="sh">여러 개 한꺼번에</div>
-    <div class="group"><div class="cell"><textarea id="bulk" placeholder="단어 | 뜻 | 예문 | 해석 | 해석 속 뜻&#10;한 줄에 하나씩. 엑셀에서 복사해 붙여도 돼요."></textarea></div></div>
-    <div class="btns"><button class="btn gray" onclick="addBulk()">${esc(d.name)}에 한꺼번에 추가</button></div>
-
-    <div class="sh">${esc(d.name)} · ${d.items.length}개</div>
-    <div class="group">${d.items.length ? d.items.map((it, k) => `
-      <div class="cell"><span class="grow two"><div>${esc(it.word)} <span class="detail">${esc(it.meaning)}</span></div>
-        <div class="sub">${esc(it.sentence)}</div></span>
-        <button class="bar-btn" style="color:var(--red);padding:0;height:auto" onclick="delItem(${k})">삭제</button></div>`).join("")
-      : `<div class="cell"><span class="detail">아직 단어가 없어요.</span></div>`}
-    </div>
-
-    <div class="group" style="margin-top:30px">
-      <button class="cell tint" onclick="renameChapter()">챕터 이름 바꾸기</button>
-      <button class="cell tint" onclick="renameDay()">Day 이름 바꾸기</button>
       <button class="cell tint" onclick="exportData()">백업 파일 받기</button>
       <button class="cell tint" onclick="$('#imp').click()">백업 파일 넣기</button>
       <input type="file" id="imp" accept=".json" class="hide" onchange="importData(this)">
     </div>
+    <div class="sf">기기 동기화를 켜 두면 백업은 따로 안 해도 돼요.</div>`);
+}
+
+function openChapter(i) { libCh = chapters()[i]; libEdit = false; chapterView(); }
+function chapterView() {
+  S = null; screen = chapterView;
+  if (!chapters().includes(libCh)) return libraryScreen();
+  const days = db.days.map((d, i) => [d, i]).filter(([d]) => d.chapter === libCh);
+  render(navbar(backBtn("단어 관리", "libraryScreen()"), esc(libCh), editBtn()) + `
+    <div class="sh">Day</div>
+    <div class="group">${days.map(([d, i]) => `
+      <button class="cell" onclick="${libEdit ? `delDayAt(${i})` : `openDay(${i})`}">
+        ${libEdit ? minusBtn() : ""}<span class="grow">${esc(d.name)}</span><span class="detail">${d.items.length}</span>${libEdit ? "" : ICON.chev}
+      </button>`).join("")}
+      ${libEdit ? "" : `<button class="cell ico tint" onclick="addDay()"><span class="ic" style="background:var(--green)">${ICON.plus}</span><span class="grow">새 Day</span></button>`}
+    </div>
+    ${libEdit ? `<div class="sf">⊖ 를 누르면 그 Day와 안의 단어가 지워져요.</div>` : ""}
     <div class="group" style="margin-top:30px">
-      <button class="cell danger center" onclick="delDay()">${esc(d.name)} 삭제</button>
+      <button class="cell tint" onclick="renameChapter()">챕터 이름 바꾸기</button>
     </div>`);
 }
-function pickManageChapter(i) { mChapter = chapters()[+i]; curDay = -1; manage(); }
+
+function openDay(i) { libDay = i; libEdit = false; dayView(); }
+function dayView() {
+  S = null; screen = dayView;
+  const d = db.days[libDay];
+  if (!d) return chapterView();
+  render(navbar(backBtn("챕터", "chapterView()"), esc(d.name), editBtn()) + `
+    ${libEdit ? "" : `<div class="group" style="margin-top:20px">
+      <button class="cell ico" onclick="wordSheet()"><span class="ic" style="background:var(--tint)">${ICON.plus}</span><span class="grow">단어 추가</span>${ICON.chev}</button>
+      <button class="cell ico" onclick="bulkSheet()"><span class="ic" style="background:var(--orange)">${ICON.list}</span><span class="grow">여러 개 붙여넣기</span>${ICON.chev}</button>
+    </div>`}
+    <div class="sh">단어 ${d.items.length}개</div>
+    <div class="group">${d.items.length ? d.items.map((it, k) => `
+      <button class="cell" onclick="${libEdit ? `delWordAt(${k})` : `wordSheet(${k})`}">
+        ${libEdit ? minusBtn() : ""}
+        <span class="grow two"><div>${esc(it.word)} <span class="detail">${esc(it.meaning)}</span></div><div class="sub">${esc(it.sentence)}</div></span>
+        ${libEdit ? "" : ICON.chev}
+      </button>`).join("") : `<div class="cell"><span class="detail">아직 단어가 없어요.</span></div>`}
+    </div>
+    ${libEdit ? "" : `<div class="group" style="margin-top:30px"><button class="cell tint" onclick="renameDay()">Day 이름 바꾸기</button></div>`}`);
+}
+
+/* 아래에서 올라오는 창 (iOS 시트) */
+function sheet(title, okLabel, body, onOK) {
+  closeSheet(true);
+  document.body.insertAdjacentHTML("beforeend", `<div class="sheet-bg" id="sheet"><div class="sheet" role="dialog">
+    <nav class="nav"><div class="nl"><button class="bar-btn" onclick="closeSheet()">취소</button></div>
+      <div class="nt">${esc(title)}</div>
+      <div class="nr"><button class="bar-btn" style="font-weight:600" id="sheetOK">${esc(okLabel)}</button></div></nav>
+    <div class="sheet-body">${body}</div></div></div>`);
+  $("#sheetOK").onclick = onOK;
+  document.documentElement.style.overflow = "hidden";
+}
+function closeSheet(now) {
+  const s = $("#sheet"); document.documentElement.style.overflow = "";
+  if (!s) return;
+  s.id = "";
+  if (now) return s.remove();
+  s.classList.add("out"); setTimeout(() => s.remove(), 260);
+}
+const grow = `oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"`;
+
+// 단어 추가 (k 없음) · 고치기 (k 있음)
+function wordSheet(k) {
+  const d = db.days[libDay]; if (!d) return;
+  const it = k === undefined ? null : d.items[k];
+  const v = it ? [it.word, it.meaning, it.sentence, it.translation, it.chunk] : ["", "", "", "", ""];
+  sheet(it ? "단어 고치기" : "새 단어", it ? "저장" : "추가", `
+    <div class="sh">영어</div>
+    <div class="group">
+      <div class="cell"><input type="text" id="f0" placeholder="단어   예: submit" value="${esc(v[0])}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="cell"><textarea class="ta" id="f2" rows="2" placeholder="예문   예: All applicants must submit their résumés by Friday." ${grow}>${esc(v[2])}</textarea></div>
+    </div>
+    <div class="sh">한국어</div>
+    <div class="group">
+      <div class="cell"><input type="text" id="f1" placeholder="뜻   예: 제출하다, 내다" value="${esc(v[1])}"></div>
+      <div class="cell"><textarea class="ta" id="f3" rows="2" placeholder="해석   예: 모든 지원자는 금요일까지 이력서를 제출해야 합니다." ${grow}>${esc(v[3])}</textarea></div>
+    </div>
+    <div class="sh">STEP 3 빈칸</div>
+    <div class="group"><div class="cell"><input type="text" id="f4" placeholder="해석 속 단어 뜻   예: 제출" value="${esc(v[4])}"></div></div>
+    <div class="sf">비워 두면 뜻을 보고 알아서 찾아요. 뜻을 쉼표로 여러 개 적으면 STEP 3에서 모두 정답이 돼요.</div>
+    ${it ? `<div class="group" style="margin-top:30px"><button class="cell danger center" onclick="closeSheet(true);delWordAt(${k})">단어 삭제</button></div>` : ""}
+    <div class="sf" style="text-align:center;margin-top:16px">「${esc(d.name)}」에 ${it ? "있는 단어예요" : "들어가요"}.</div>`,
+    () => saveWord(k));
+  const ok = $("#sheetOK"), need = () => { ok.disabled = !($("#f0").value.trim() && $("#f2").value.trim()); };
+  ["#f0", "#f2"].forEach(s => $(s).addEventListener("input", need)); need();
+  document.querySelectorAll("#sheet textarea").forEach(t => { t.style.height = t.scrollHeight + "px"; });
+  if (!it) setTimeout(() => $("#f0").focus(), 320);
+}
+function saveWord(k) {
+  const d = db.days[libDay];
+  const v = [0, 1, 2, 3, 4].map(i => $("#f" + i).value);
+  if (!v[0].trim() || !v[2].trim()) return;
+  const item = toItem(v);
+  if (k === undefined) d.items.push(item);
+  else {
+    // 단어나 예문을 고쳐도 별표 · ✓ 는 그대로 따라가게
+    const oldK = keyOf(d.items[k]), newK = keyOf(item);
+    if (oldK !== newK) { db.marked = db.marked.map(x => x === oldK ? newK : x); db.known = db.known.map(x => x === oldK ? newK : x); }
+    d.items[k] = item;
+  }
+  save(); closeSheet(); dayView();
+}
+function bulkSheet() {
+  const d = db.days[libDay]; if (!d) return;
+  sheet("여러 개 붙여넣기", "추가", `
+    <div class="sh">한 줄에 단어 하나</div>
+    <div class="group"><div class="cell"><textarea id="bulk" style="min-height:220px" placeholder="submit | 제출하다 | All applicants must submit their résumés by Friday. | 모든 지원자는 금요일까지 이력서를 제출해야 합니다. | 제출"></textarea></div></div>
+    <div class="sf">순서: 단어 | 뜻 | 예문 | 해석 | 해석 속 단어 뜻(없어도 돼요)\n엑셀에서 칸째로 복사해 붙여도 돼요. 「${esc(d.name)}」에 들어가요.</div>`,
+    addBulk);
+  setTimeout(() => $("#bulk").focus(), 320);
+}
+async function addBulk() {
+  const d = db.days[libDay];
+  const lines = $("#bulk").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let n = 0;
+  for (const l of lines) {
+    const parts = l.includes("\t") ? l.split("\t") : l.split("|");
+    if (parts.length < 3 || !parts[0].trim()) continue;
+    d.items.push(toItem(parts)); n++;
+  }
+  if (!n) return tell("추가할 줄이 없어요", "한 줄에 「단어 | 뜻 | 예문 | 해석」 꼴인지 확인해 주세요.");
+  save(); closeSheet(); dayView(); tell(`${n}개 추가했어요`);
+}
+
 async function addChapter() {
   const ch = await askText("새 챕터", "챕터 이름을 적어 주세요.", "", "예: 기초 단어", "다음");
   if (!ch) return;
-  if (chapters().includes(ch)) { mChapter = ch; return manage(); }
+  if (chapters().includes(ch)) { libCh = ch; return chapterView(); }
   const name = await askText("첫 Day", `「${ch}」 챕터에 만들 첫 Day 이름이에요.`, "Day 1", "Day 1", "만들기");
   if (!name) return;
   if (db.days.some(x => x.name === name)) return tell("같은 이름의 Day가 있어요", "다른 이름으로 적어 주세요.");
   db.days.push({ name, chapter: ch, items: [] });
-  mChapter = ch; curDay = db.days.length - 1; save(); manage();
+  libCh = ch; save(); chapterView();
 }
 async function addDay() {
-  const ch = mChapter || curChapter() || MY;
+  const ch = libCh || curChapter() || MY;
   const name = await askText("새 Day", `「${ch}」 챕터에 만들어요.`, "Day " + (db.days.filter(x => x.chapter === ch).length + 1), "", "만들기");
   if (!name) return;
   if (db.days.some(x => x.name === name)) return tell("같은 이름의 Day가 있어요", "다른 이름으로 적어 주세요.");
-  db.days.push({ name, chapter: ch, items: [] }); curDay = db.days.length - 1; save(); manage();
+  db.days.push({ name, chapter: ch, items: [] }); save(); chapterView();
 }
 async function renameDay() {
-  const d = db.days[curDay];
+  const d = db.days[libDay]; if (!d) return;
   const name = await askText("Day 이름 바꾸기", "", d.name, "", "저장");
   if (!name || name === d.name) return;
   if (db.days.some(x => x.name === name)) return tell("같은 이름의 Day가 있어요", "다른 이름으로 적어 주세요.");
   if (!d.orig) d.orig = d.name; // 단어 파일에서 온 Day 는 원래 이름을 기억해 둠
   db.picked = db.picked.map(x => x === d.name ? name : x);
   if (db.wordsDay === d.name) db.wordsDay = name;
-  d.name = name; save(); manage();
+  d.name = name; save(); dayView();
 }
 async function renameChapter() {
-  const old = mChapter;
+  const old = libCh;
   const name = await askText("챕터 이름 바꾸기", "", old, "", "저장");
   if (!name || name === old) return;
   if (chapters().includes(name)) return tell("같은 이름의 챕터가 있어요", "다른 이름으로 적어 주세요.");
@@ -999,32 +1110,17 @@ async function renameChapter() {
   for (const k of Object.keys(db.chapterAlias)) if (db.chapterAlias[k] === old) db.chapterAlias[k] = name;
   if (!Object.values(db.chapterAlias).includes(name)) db.chapterAlias[old] = name;
   if (db.chapter === old) db.chapter = name;
-  mChapter = name; save(); manage();
+  libCh = name; save(); chapterView();
 }
-async function delDay() {
-  const d = db.days[curDay];
+async function delDayAt(i) {
+  const d = db.days[i]; if (!d) return;
   if (!await askOK(`${d.name} 삭제`, `안의 단어 ${d.items.length}개도 함께 지워져요.\n되돌릴 수 없어요.`, "삭제", true)) return;
-  db.days.splice(curDay, 1); db.picked = db.picked.filter(x => x !== d.name); curDay = -1; save(); manage();
+  db.days.splice(i, 1); db.picked = db.picked.filter(x => x !== d.name); save(); chapterView();
 }
-async function addOne() {
-  const v = [0, 1, 2, 3, 4].map(i => $("#f" + i).value);
-  if (!v[0].trim() || !v[2].trim()) return tell("단어와 예문을 넣어 주세요", "이 두 칸은 꼭 있어야 해요.");
-  db.days[curDay].items.push(toItem(v)); save(); manage(); $("#f0").focus();
-}
-async function addBulk() {
-  const lines = $("#bulk").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  let n = 0;
-  for (const l of lines) {
-    const parts = l.includes("\t") ? l.split("\t") : l.split("|");
-    if (parts.length < 3 || !parts[0].trim()) continue;
-    db.days[curDay].items.push(toItem(parts)); n++;
-  }
-  save(); manage(); tell(`${n}개 추가했어요`, n ? "" : "한 줄에 「단어 | 뜻 | 예문 | 해석」 꼴인지 확인해 주세요.");
-}
-async function delItem(k) {
-  const it = db.days[curDay].items[k];
+async function delWordAt(k) {
+  const d = db.days[libDay], it = d && d.items[k]; if (!it) return;
   if (!await askOK(`${it.word} 삭제`, "되돌릴 수 없어요.", "삭제", true)) return;
-  db.days[curDay].items.splice(k, 1); setMark(it, false); save(); manage();
+  d.items.splice(k, 1); setMark(it, false); setKnown(it, false); save(); dayView();
 }
 function exportData() {
   const a = document.createElement("a");
@@ -1086,7 +1182,7 @@ async function syncNow() {
 function applyRemote(data) {
   db = data; normalize(); mergeWords(); saveLocal();
   const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
-  if (!S && screen && !typing && !$("#alert") && !$("#dlg")) screen();
+  if (!S && screen && !typing && !$("#alert") && !$("#dlg") && !$("#sheet")) screen();
 }
 async function startSync() {
   sync = { code: newCode() }; saveSync();
@@ -1182,7 +1278,7 @@ async function checkUpdate() {
 }
 function applyUpdateIfIdle() {
   const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
-  if (updateWaiting && !S && !typing && !$("#alert") && !$("#dlg")) location.reload();
+  if (updateWaiting && !S && !typing && !$("#alert") && !$("#dlg") && !$("#sheet")) location.reload();
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
 setInterval(() => { if (document.visibilityState === "visible") checkUpdate(); }, 5 * 60 * 1000);
