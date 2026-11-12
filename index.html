@@ -85,6 +85,10 @@
   .stepper button { width: 46px; height: 32px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--label); }
   .stepper button:active { opacity: .3; }
   .stepper i { width: 1px; height: 18px; background: var(--sep); }
+  .cell input.count { flex: none; width: 52px; height: 32px; padding: 0 6px; margin-right: -6px; border-radius: 8px; background: var(--fill);
+    text-align: right; font-size: 17px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+  .cell input.count::-webkit-outer-spin-button, .cell input.count::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .cell input.count:focus { box-shadow: 0 0 0 2px var(--tint); }
 
   /* 버튼 */
   .btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 50px; border: 0; border-radius: 12px;
@@ -176,6 +180,11 @@ const ICON = {
 
 /* ---------- 저장 ---------- */
 const KEY = "toeic-words-v1";
+const MY = "내 단어"; // 챕터 없이 직접 만든 Day 가 들어가는 챕터
+// 지금 고른 챕터 (없으면 첫 챕터)
+function chapters() { return [...new Set(db.days.map(d => d.chapter))]; }
+function curChapter() { const cs = chapters(); return cs.includes(db.chapter) ? db.chapter : cs[0]; }
+const chapterDays = () => db.days.filter(d => d.chapter === curChapter());
 let db;
 const keyOf = it => it.word.toLowerCase() + "||" + it.sentence;
 
@@ -190,20 +199,33 @@ function normalize() {
   if (!db.marked) db.marked = [];
   if (!db.picked) db.picked = [];
   if (!db.count) db.count = 10;
+  if (!db.removed) db.removed = [];
+  for (const d of db.days) if (!d.chapter) d.chapter = MY;
   if (!db.seen) db.seen = db.days.flatMap(d => d.items.map(it => d.name + "||" + it.word.toLowerCase()));
 }
 // words.js 에 새로 생긴 단어만 앱에 넣기 (앱에서 지운 건 다시 안 넣음)
 function mergeWords() {
+  // 예전에 뺀 Day 는 한 번 지움 (나중에 같은 이름으로 다시 만들면 그건 그대로 둠)
+  if (typeof REMOVED_DAYS !== "undefined") for (const name of REMOVED_DAYS) {
+    if (db.removed.includes(name)) continue;
+    db.days = db.days.filter(d => d.name !== name);
+    db.picked = db.picked.filter(x => x !== name);
+    db.removed.push(name);
+  }
   if (typeof WORDS === "undefined") return;
   for (const d of WORDS) {
     let day = db.days.find(x => x.name === d.day);
+    if (day && d.chapter) day.chapter = d.chapter;
     for (const a of d.items) {
       const k = d.day + "||" + a[0].trim().toLowerCase();
       if (db.seen.includes(k)) continue;
-      if (!day) { day = { name: d.day, items: [] }; db.days.push(day); }
+      if (!day) { day = { name: d.day, chapter: d.chapter || MY, items: [] }; db.days.push(day); }
       day.items.push(toItem(a)); db.seen.push(k);
     }
   }
+  // 고른 챕터에 체크된 Day 가 하나도 없으면 첫 Day 를 골라 둠
+  const cds = chapterDays();
+  if (cds.length && !cds.some(d => db.picked.includes(d.name))) db.picked.push(cds[0].name);
 }
 function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 // 사용자가 뭔가 바꿨을 때: 이 기기에 저장 + 다른 기기로 보내기
@@ -224,7 +246,15 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const norm = s => String(s).toLowerCase().replace(/[\s.,'’"!?~·-]/g, "");
 const allItems = () => db.days.flatMap(d => d.items);
-function render(html) { $("#app").innerHTML = html; window.scrollTo(0, 0); }
+// 같은 화면을 다시 그릴 때(+ 버튼, Day 체크 등)는 스크롤 위치를 그대로 둠
+let lastRendered = null;
+function render(html) {
+  const keep = !S && screen && screen === lastRendered;
+  const y = window.scrollY;
+  $("#app").innerHTML = html;
+  window.scrollTo(0, keep ? y : 0);
+  lastRendered = S ? null : screen;
+}
 
 // 예문 속에서 단어가 실제로 쓰인 모양 찾기: postpone → postponed, be responsible for → is responsible for
 const reEsc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -328,17 +358,26 @@ function home() {
   render(navbar("", "", textBtn("단어 추가", "manage()"), false) + `
     <h1 class="large">TOEIC Words</h1>
 
+    <div class="group" style="margin-top:20px">
+      <button class="cell ico" onclick="chapterScreen()">
+        <span class="ic" style="background:var(--indigo)">${ICON.book}</span>
+        <span class="grow">챕터</span><span class="detail">${esc(curChapter() || "없음")}</span>${ICON.chev}
+      </button>
+    </div>
+
     <div class="sh">Day</div>
-    <div class="group">${db.days.map((d, i) => `
-      <button class="cell" onclick="toggleDay(${i})">
+    <div class="group">${chapterDays().map(d => `
+      <button class="cell" onclick="toggleDay(${db.days.indexOf(d)})">
         <span class="grow">${esc(d.name)}</span><span class="detail">${d.items.length}</span>
         <span class="check ${db.picked.includes(d.name) ? "" : "off"}">${ICON.check}</span>
-      </button>`).join("")}
+      </button>`).join("") || `<div class="cell"><span class="detail">이 챕터에는 아직 Day가 없어요.</span></div>`}
     </div>
     <div class="sf">여러 개 고르면 섞어서 나와요.</div>
 
     <div class="group" style="margin-top:30px">
-      <div class="cell"><span class="grow">한 번에</span><span class="detail">${db.count}개</span>
+      <div class="cell"><span class="grow">한 번에</span>
+        <input class="count" type="number" inputmode="numeric" min="1" max="200" value="${db.count}" aria-label="한 번에 몇 개"
+          onfocus="this.select()" onchange="setCountTo(this.value)" onkeydown="if(event.key==='Enter')this.blur()"><span class="detail">개</span>
         <div class="stepper"><button onclick="setCount(-1)" aria-label="줄이기">−</button><i></i><button onclick="setCount(1)" aria-label="늘리기">+</button></div>
       </div>
     </div>
@@ -364,14 +403,41 @@ function home() {
     <div class="sf">${sync.code ? "폰 · 아이패드 · 노트북 기록이 같이 맞춰지고 있어요." : "켜면 폰 · 아이패드 · 노트북 기록이 같이 맞춰져요."}</div>
     ${installRow()}`);
 }
-function setCount(d) { db.count = Math.max(1, Math.min(200, db.count + d)); save(); home(); }
+function setCount(d) { setCountTo(db.count + d); }
+function setCountTo(v) { db.count = Math.max(1, Math.min(200, parseInt(v, 10) || db.count)); save(); home(); }
+
+/* ---------- 챕터 고르기 ---------- */
+function chapterScreen() {
+  S = null; screen = chapterScreen;
+  const cur = curChapter();
+  render(navbar(backBtn("홈", "home()"), "챕터", "") + `
+    <div class="sh">챕터 고르기</div>
+    <div class="group">${chapters().map((c, i) => {
+      const days = db.days.filter(d => d.chapter === c);
+      const words = days.reduce((n, d) => n + d.items.length, 0);
+      return `<button class="cell" onclick="pickChapter(${i})">
+        <span class="grow two"><div>${esc(c)}</div><div class="sub">Day ${days.length}개 · 단어 ${words}개</div></span>
+        <span class="check ${c === cur ? "" : "off"}">${ICON.check}</span></button>`;
+    }).join("")}</div>
+    <div class="sf">처음이라면 쉬운 챕터부터 시작하세요. 챕터는 계속 늘어나요.</div>`);
+}
+function pickChapter(i) {
+  const c = chapters()[i];
+  if (c !== curChapter()) {
+    db.chapter = c;
+    const first = db.days.find(d => d.chapter === c);
+    if (!db.days.some(d => d.chapter === c && db.picked.includes(d.name)) && first) db.picked.push(first.name);
+    save();
+  }
+  home();
+}
 function toggleDay(i) {
   const n = db.days[i].name;
   db.picked = db.picked.includes(n) ? db.picked.filter(x => x !== n) : db.picked.concat(n);
   save(); home();
 }
 function pickedItems() {
-  return db.days.filter(d => db.picked.includes(d.name)).flatMap(d => d.items.filter(it => it.sentence));
+  return chapterDays().filter(d => db.picked.includes(d.name)).flatMap(d => d.items.filter(it => it.sentence));
 }
 
 /* ---------- 별표 단어 ---------- */
@@ -400,7 +466,7 @@ function start(step, list, fromNotes) {
   let items = list;
   if (!items) {
     items = pickedItems();
-    if (step !== 1 || db.picked.length > 1) items = shuffle(items);
+    if (step !== 1 || chapterDays().filter(d => db.picked.includes(d.name)).length > 1) items = shuffle(items);
     items = items.slice(0, db.count);
   }
   S = { step, list: items, i: 0, wrong: [], answered: false, fromNotes: !!fromNotes };
@@ -652,7 +718,8 @@ function manage() {
 function addDay() {
   const name = prompt("새 Day 이름", "Day " + (db.days.length + 1));
   if (!name) return;
-  db.days.push({ name: name.trim(), items: [] }); curDay = db.days.length - 1; save(); manage();
+  const ch = curChapter() || MY;
+  db.days.push({ name: name.trim(), chapter: ch, items: [] }); curDay = db.days.length - 1; save(); manage();
 }
 function renameDay() {
   const d = db.days[curDay]; const name = prompt("새 이름", d.name);

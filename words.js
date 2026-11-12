@@ -3,35 +3,15 @@
   여기에 새 Day 나 단어를 더하면, 앱을 다시 열 때 자동으로 들어갑니다.
   (앱에서 지운 단어는 다시 들어오지 않아요.)
 
+  chapter = 챕터 이름 (예: "토익 600 맞춤형", "기초 단어")
   한 줄 = [단어, 뜻, 예문, 해석, 해석 속 단어 뜻]
 */
-const WORDS = [
-  { day: "Day 1", items: [
-    ["submit", "제출하다", "All applicants must submit their résumés by Friday.", "모든 지원자는 금요일까지 이력서를 제출해야 합니다.", "제출"],
-    ["postpone", "연기하다", "The board meeting has been postponed until next Monday.", "이사회 회의가 다음 주 월요일로 연기되었습니다.", "연기"],
-    ["review", "검토하다", "Please review the attached contract before the meeting.", "회의 전에 첨부된 계약서를 검토해 주십시오.", "검토"],
-    ["confirm", "확인하다", "Could you confirm your reservation by e-mail?", "이메일로 예약을 확인해 주시겠습니까?", "확인"],
-    ["attend", "참석하다", "Over 200 people are expected to attend the conference.", "200명이 넘는 사람들이 그 회의에 참석할 것으로 예상됩니다.", "참석"],
-    ["approve", "승인하다", "The manager approved the budget for the new project.", "관리자가 새 프로젝트의 예산을 승인했습니다.", "승인"],
-    ["extend", "연장하다", "The store will extend its business hours during the holidays.", "그 상점은 연휴 기간 동안 영업시간을 연장할 것입니다.", "연장"],
-    ["inquire", "문의하다", "Customers can inquire about the delivery status online.", "고객들은 온라인으로 배송 상태를 문의할 수 있습니다.", "문의"],
-    ["renovate", "보수하다", "The lobby is being renovated this month.", "이번 달에 로비가 보수되고 있습니다.", "보수"],
-    ["distribute", "배포하다", "The handouts will be distributed at the start of the session.", "유인물은 세션 시작 시에 배포될 것입니다.", "배포"],
-  ]},
-  { day: "Day 2", items: [
-    ["reserve", "예약하다", "I'd like to reserve a table for four at seven o'clock.", "7시에 4명 자리를 예약하고 싶습니다.", "예약"],
-    ["recruit", "모집하다", "The company is recruiting experienced sales staff.", "그 회사는 경력 있는 영업 직원을 모집하고 있습니다.", "모집"],
-    ["launch", "출시하다", "The firm plans to launch a new product line next spring.", "그 회사는 내년 봄에 새 제품군을 출시할 계획입니다.", "출시"],
-    ["assign", "배정하다", "Each new employee will be assigned a mentor.", "각 신입 사원에게 멘토가 배정될 것입니다.", "배정"],
-    ["reimburse", "환급하다", "Travel expenses will be reimbursed within two weeks.", "출장 경비는 2주 이내에 환급될 것입니다.", "환급"],
-    ["register", "등록하다", "Participants must register for the workshop in advance.", "참가자들은 워크숍에 미리 등록해야 합니다.", "등록"],
-    ["relocate", "이전하다", "Our headquarters will relocate to Seoul next year.", "우리 본사는 내년에 서울로 이전할 것입니다.", "이전"],
-    ["implement", "시행하다", "The new safety policy will be implemented next month.", "새 안전 정책은 다음 달에 시행될 것입니다.", "시행"],
-    ["negotiate", "협상하다", "The two companies are negotiating a merger agreement.", "두 회사는 합병 계약을 협상하고 있습니다.", "협상"],
-    ["evaluate", "평가하다", "Supervisors evaluate employee performance twice a year.", "관리자들은 1년에 두 번 직원 성과를 평가합니다.", "평가"],
-  ]},
 
-  { day: "D08 · Part 4", items: [
+// 예전에 넣었다가 뺀 Day: 기기에 남아 있으면 지움
+const REMOVED_DAYS = ["Day 1", "Day 2"];
+
+const WORDS = [
+  { chapter: "토익 600 맞춤형", day: "D08 · Part 4", items: [
     ["contest", "대회, 경연", "The winner of the photo contest will be announced on Friday.", "사진 대회 우승자는 금요일에 발표될 것입니다.", "대회"],
     ["keynote", "기조연설", "Dr. Lee will deliver the keynote at this year's conference.", "이 박사가 올해 학회에서 기조연설을 할 것입니다.", "기조연설"],
     ["cancellation", "취소", "Due to the cancellation of the flight, passengers will receive a full refund.", "항공편 취소로 인해 승객들은 전액 환불을 받을 것입니다.", "취소"],
@@ -84,7 +64,7 @@ const WORDS = [
     ["sales agent", "영업 사원, 판매 대리인", "Please contact our sales agent for a price quote.", "가격 견적은 저희 영업 사원에게 문의하십시오.", "영업 사원"],
   ]},
 
-  { day: "D09 · Part 4", items: [
+  { chapter: "토익 600 맞춤형", day: "D09 · Part 4", items: [
     ["compliment", "칭찬하다, 칭찬", "Many customers complimented the staff on their friendly service.", "많은 고객이 직원들의 친절한 서비스를 칭찬했습니다.", "칭찬"],
     ["familiar", "익숙한, 잘 아는", "Are you familiar with this software?", "이 소프트웨어에 익숙하십니까?", "익숙"],
     ["publish", "출판하다, 발표하다, 게재하다", "The report will be published next month.", "그 보고서는 다음 달에 발표될 것입니다.", "발표"],
@@ -137,7 +117,7 @@ const WORDS = [
     ["training session", "교육 과정, 연수", "All new employees must attend a training session.", "모든 신입 사원은 교육 과정에 참석해야 합니다.", "교육 과정"],
   ]},
 
-  { day: "D10 · Part 4", items: [
+  { chapter: "토익 600 맞춤형", day: "D10 · Part 4", items: [
     ["surge", "급증, 급증하다", "There has been a surge in online orders.", "온라인 주문이 급증했습니다.", "급증"],
     ["wrinkle", "주름, 주름지다", "This fabric does not wrinkle easily.", "이 원단은 쉽게 주름지지 않습니다.", "주름"],
     ["storyteller", "이야기꾼", "A famous storyteller will visit the library on Sunday.", "유명한 이야기꾼이 일요일에 도서관을 방문할 것입니다.", "이야기꾼"],
@@ -190,7 +170,7 @@ const WORDS = [
     ["cleaning crew", "청소 직원, 청소팀", "The cleaning crew comes every evening at 7.", "청소 직원들이 매일 저녁 7시에 옵니다.", "청소 직원"],
   ]},
 
-  { day: "D11 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D11 · Part 5&6", items: [
     ["provide", "제공하다", "We provide free parking for all guests.", "저희는 모든 손님께 무료 주차를 제공합니다.", "제공"],
     ["business", "업체, 사업", "Many local businesses support the festival.", "많은 지역 업체들이 그 축제를 후원합니다.", "업체"],
     ["offer", "제안하다, 제공하다, 제안", "The company offered her the position.", "회사는 그녀에게 그 자리를 제안했습니다.", "제안"],
@@ -243,7 +223,7 @@ const WORDS = [
     ["safety protocol", "안전 수칙", "Workers must follow the safety protocol at all times.", "작업자들은 항상 안전 수칙을 따라야 합니다.", "안전 수칙"],
   ]},
 
-  { day: "D12 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D12 · Part 5&6", items: [
     ["location", "지점, 위치", "Our new location is next to the train station.", "저희 새 지점은 기차역 옆에 있습니다.", "지점"],
     ["general", "총괄의, 일반적인, 전반적인", "The general manager will visit the branch tomorrow.", "총괄 관리자가 내일 지점을 방문할 것입니다.", "총괄"],
     ["system", "시스템", "The new booking system is easy to use.", "새 예약 시스템은 사용하기 쉽습니다.", "시스템"],
@@ -296,7 +276,7 @@ const WORDS = [
     ["be willing to", "기꺼이 ~하다", "We are willing to change the schedule if needed.", "필요하다면 저희는 기꺼이 일정을 변경하겠습니다.", "기꺼이"],
   ]},
 
-  { day: "D13 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D13 · Part 5&6", items: [
     ["encourage", "권장하다, 장려하다", "Employees are encouraged to use public transportation.", "직원들은 대중교통을 이용하도록 권장됩니다.", "권장"],
     ["avoid", "피하다", "To avoid delays, please arrive early.", "지연을 피하려면 일찍 도착해 주십시오.", "피하"],
     ["significantly", "상당히", "Sales have increased significantly this year.", "올해 매출이 상당히 증가했습니다.", "상당히"],
@@ -349,7 +329,7 @@ const WORDS = [
     ["replace A with B", "A를 B로 교체하다", "We will replace the old chairs with new ones.", "저희는 낡은 의자를 새것으로 교체할 것입니다.", "교체"],
   ]},
 
-  { day: "D14 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D14 · Part 5&6", items: [
     ["precisely", "정확히", "The train left precisely at 8 o'clock.", "기차는 정확히 8시에 출발했습니다.", "정확히"],
     ["fund", "자금을 대다, 자금", "The project is funded by the city.", "그 프로젝트는 시에서 자금을 지원합니다.", "자금"],
     ["advanced", "고급의, 진보된", "This course is for advanced students.", "이 강좌는 고급 학습자를 위한 것입니다.", "고급"],
@@ -402,7 +382,7 @@ const WORDS = [
     ["be pleased to", "~하게 되어 기쁘다", "We are pleased to welcome you to our team.", "저희 팀에 귀하를 맞이하게 되어 기쁜 마음입니다.", "기쁜"],
   ]},
 
-  { day: "D15 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D15 · Part 5&6", items: [
     ["direction", "지시, 방향", "Please follow the directions on the package.", "포장지에 적힌 지시 사항을 따라 주십시오.", "지시"],
     ["extremely", "매우, 극도로", "The new manager is extremely helpful.", "새 관리자는 매우 도움이 됩니다.", "매우"],
     ["lack", "부족, 부족하다", "The project was delayed due to a lack of funds.", "그 프로젝트는 자금 부족으로 지연되었습니다.", "부족"],
@@ -455,7 +435,7 @@ const WORDS = [
     ["be attributed to", "~의 덕분이다, ~때문이다", "The increase in sales is attributed to the new ad.", "매출 증가는 새 광고 덕분입니다.", "덕분"],
   ]},
 
-  { day: "D16 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D16 · Part 5&6", items: [
     ["depart", "출발하다", "The train departs at 7:30 A.M.", "기차는 오전 7시 30분에 출발합니다.", "출발"],
     ["consultation", "상담", "Call us today for a free consultation.", "무료 상담을 위해 오늘 전화 주십시오.", "상담"],
     ["line", "제품군, 줄, 노선", "We are launching a new line of sportswear.", "저희는 새로운 운동복 제품군을 출시합니다.", "제품군"],
@@ -508,7 +488,7 @@ const WORDS = [
     ["familiarize oneself with", "~을 숙지하다, ~에 익숙해지다", "Please familiarize yourself with the safety rules.", "안전 규칙을 숙지해 주십시오.", "숙지"],
   ]},
 
-  { day: "D17 · Part 5&6", items: [
+  { chapter: "토익 600 맞춤형", day: "D17 · Part 5&6", items: [
     ["party", "일행, 당사자", "How many people are in your party?", "일행이 몇 분이십니까?", "일행"],
     ["seat", "수용하다, 앉히다, 좌석", "The theater can seat 300 people.", "그 극장은 300명을 수용할 수 있습니다.", "수용"],
     ["formula", "제조법, 공식", "The company changed the formula of its shampoo.", "그 회사는 샴푸의 제조법을 바꿨습니다.", "제조법"],
@@ -561,7 +541,7 @@ const WORDS = [
     ["be urged to", "~하도록 촉구되다", "Residents are urged to save water.", "주민들은 물을 절약하도록 촉구됩니다.", "촉구"],
   ]},
 
-  { day: "D18 · Part 7", items: [
+  { chapter: "토익 600 맞춤형", day: "D18 · Part 7", items: [
     ["résumé", "이력서", "Please attach your résumé to the e-mail.", "이메일에 이력서를 첨부해 주십시오.", "이력서"],
     ["application", "지원서, 신청", "Applications must be received by May 10.", "지원서는 5월 10일까지 도착해야 합니다.", "지원서"],
     ["requirement", "자격 요건, 요구 사항", "A college degree is a requirement for this job.", "대학 학위는 이 일자리의 자격 요건입니다.", "자격 요건"],
@@ -614,7 +594,7 @@ const WORDS = [
     ["job opening", "공석, 채용 공고", "There is a job opening in the marketing department.", "마케팅 부서에 공석이 있습니다.", "공석"],
   ]},
 
-  { day: "D19 · Part 7", items: [
+  { chapter: "토익 600 맞춤형", day: "D19 · Part 7", items: [
     ["representative", "직원, 대표자", "A customer service representative will call you back.", "고객 서비스 직원이 다시 전화드릴 것입니다.", "직원"],
     ["direct", "보내다, 향하게 하다, 직접적인", "Please direct your questions to our help desk.", "질문은 저희 안내 데스크로 보내 주십시오.", "보내"],
     ["handle", "처리하다, 다루다", "Our team will handle your request.", "저희 팀이 귀하의 요청을 처리할 것입니다.", "처리"],
@@ -667,7 +647,7 @@ const WORDS = [
     ["conference room", "회의실", "The meeting will be held in Conference Room B.", "회의는 B 회의실에서 열릴 것입니다.", "회의실"],
   ]},
 
-  { day: "D20 · Part 7", items: [
+  { chapter: "토익 600 맞춤형", day: "D20 · Part 7", items: [
     ["ceremony", "식, 의식, 기념식", "The awards ceremony starts at 7 P.M.", "시상식은 오후 7시에 시작합니다.", "시상식"],
     ["interior", "내부, 실내의", "The interior of the store was redesigned.", "매장 내부가 새롭게 디자인되었습니다.", "내부"],
     ["rent", "임대료, 빌리다", "The rent is due on the first of each month.", "임대료는 매달 1일에 내야 합니다.", "임대료"],
