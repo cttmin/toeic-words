@@ -22,6 +22,7 @@
     --sep: rgba(60,60,67,.29); --fill: rgba(118,118,128,.12); --press: #D1D1D6;
     --tint: #007AFF; --green: #34C759; --red: #FF3B30; --orange: #FF9500; --yellow: #FFCC00; --indigo: #5856D6;
     --navbg: rgba(242,242,247,.8); --alertbg: rgba(242,242,242,.82);
+    --teal: #30B0C7; --segon: #FFFFFF;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -30,6 +31,7 @@
       --sep: rgba(84,84,88,.65); --fill: rgba(118,118,128,.24); --press: #3A3A3C;
       --tint: #0A84FF; --green: #30D158; --red: #FF453A; --orange: #FF9F0A; --yellow: #FFD60A; --indigo: #5E5CE6;
       --navbg: rgba(22,22,24,.8); --alertbg: rgba(44,44,46,.85);
+      --teal: #40C8E0; --segon: #636366;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -40,6 +42,8 @@
   }
   button, input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
   button { cursor: pointer; }
+  /* 아이폰 「두 번 탭 확대」 대기 없애기 → 연타해도 바로 반응 */
+  html, button, input, select, label, .cell { touch-action: manipulation; }
   .wrap { max-width: 600px; margin: 0 auto; padding: 0 16px calc(40px + env(safe-area-inset-bottom)); }
   .hide { display: none !important; }
   .grow { flex: 1; min-width: 0; }
@@ -134,6 +138,19 @@
   .fb { font-size: 15px; padding: 10px 16px 0; color: var(--secondary); min-height: 28px; }
   .fb b { color: var(--label); font-weight: 600; }
   .fb.ok { color: var(--green); font-weight: 600; }
+
+  /* 단어장 */
+  .seg { display: flex; background: var(--fill); border-radius: 9px; padding: 2px; margin-top: 20px; }
+  .seg button { flex: 1; height: 30px; border: 0; border-radius: 7px; background: none; font-size: 13px; font-weight: 600; color: var(--label); transition: background .2s ease-out; }
+  .seg button.on { background: var(--segon); box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); }
+  .wrow { cursor: pointer; }
+  .wrow .w { font-weight: 600; letter-spacing: -0.2px; }
+  .wrow .m { font-size: 15px; color: var(--secondary); margin-top: 3px; border-radius: 5px; transition: color .2s ease-out, background .2s ease-out; }
+  .hide-m .wrow .m { color: transparent; background: var(--fill); width: fit-content; min-width: 96px; user-select: none; }
+  .hide-m .wrow.show .m { color: var(--secondary); background: none; }
+  .spk { border: 0; background: none; color: var(--tint); padding: 8px; margin-left: -8px; flex: none; }
+  .spk svg { width: 20px; height: 20px; }
+  .spk:active { opacity: .3; }
 
   /* 알림창 (UIAlertController) */
   .alert-bg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0,0,0,.2); animation: fade .2s ease-out; }
@@ -246,13 +263,15 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const norm = s => String(s).toLowerCase().replace(/[\s.,'’"!?~·-]/g, "");
 const allItems = () => db.days.flatMap(d => d.items);
-// 같은 화면을 다시 그릴 때(+ 버튼, Day 체크 등)는 스크롤 위치를 그대로 둠
+// 스크롤 위치: 같은 화면을 다시 그리면 그대로, 다른 화면에 갔다 돌아오면 보던 자리로
 let lastRendered = null;
+const scrollMem = new Map();
 function render(html) {
-  const keep = !S && screen && screen === lastRendered;
   const y = window.scrollY;
+  if (lastRendered) scrollMem.set(lastRendered, y);
+  const keep = !S && screen && screen === lastRendered;
   $("#app").innerHTML = html;
-  window.scrollTo(0, keep ? y : 0);
+  window.scrollTo(0, S ? 0 : keep ? y : (scrollMem.get(screen) || 0));
   lastRendered = S ? null : screen;
 }
 
@@ -345,7 +364,7 @@ const STEPS = [
 ];
 function stepRows(fn, total) {
   return `<div class="group">` + [1, 2, 3].map(n => `
-    <button class="cell ico" ${total ? "" : "disabled"} onclick="${fn}(${n})">
+    <button class="cell ico step-row" ${total ? "" : "disabled"} onclick="${fn}(${n})">
       <span class="ic" style="background:${STEPS[n].color}">${n}</span>
       <span class="grow two"><div>${STEPS[n].en}</div><div class="sub">STEP ${n} · ${STEPS[n].ko}</div></span>
       ${ICON.chev}
@@ -367,7 +386,7 @@ function home() {
 
     <div class="sh">Day</div>
     <div class="group">${chapterDays().map(d => `
-      <button class="cell" onclick="toggleDay(${db.days.indexOf(d)})">
+      <button class="cell" data-day="${db.days.indexOf(d)}" onclick="toggleDay(${db.days.indexOf(d)})">
         <span class="grow">${esc(d.name)}</span><span class="detail">${d.items.length}</span>
         <span class="check ${db.picked.includes(d.name) ? "" : "off"}">${ICON.check}</span>
       </button>`).join("") || `<div class="cell"><span class="detail">이 챕터에는 아직 Day가 없어요.</span></div>`}
@@ -381,10 +400,17 @@ function home() {
         <div class="stepper"><button onclick="setCount(-1)" aria-label="줄이기">−</button><i></i><button onclick="setCount(1)" aria-label="늘리기">+</button></div>
       </div>
     </div>
-    <div class="sf">고른 단어 ${total}개 중 ${Math.min(db.count, total)}개를 공부해요.</div>
+    <div class="sf" id="countNote">${countNote()}</div>
 
     <div class="sh">학습</div>
     ${stepRows("start", total)}
+
+    <div class="group" style="margin-top:30px">
+      <button class="cell ico" onclick="wordsScreen()">
+        <span class="ic" style="background:var(--teal)">${ICON.list}</span>
+        <span class="grow">단어장</span><span class="detail">단어만 보기</span>${ICON.chev}
+      </button>
+    </div>
 
     <div class="group" style="margin-top:30px">
       <button class="cell ico" onclick="notes()">
@@ -404,7 +430,53 @@ function home() {
     ${installRow()}`);
 }
 function setCount(d) { setCountTo(db.count + d); }
-function setCountTo(v) { db.count = Math.max(1, Math.min(200, parseInt(v, 10) || db.count)); save(); home(); }
+// 화면 전체를 다시 그리지 않고 숫자와 안내 문구만 바꿈 (연타해도 가볍게)
+function setCountTo(v) {
+  db.count = Math.max(1, Math.min(200, parseInt(v, 10) || db.count)); save();
+  const inp = $("input.count"), note = $("#countNote");
+  if (screen !== home || !inp || !note) return home();
+  inp.value = db.count; note.textContent = countNote();
+}
+function countNote() { const t = pickedItems().length; return `고른 단어 ${t}개 중 ${Math.min(db.count, t)}개를 공부해요.`; }
+
+/* ---------- 단어장 (단어 + 뜻만) ---------- */
+let wordsOrder = null, wItems = [], wDay = null;
+function wordsScreen() {
+  S = null; screen = wordsScreen;
+  const head = navbar(backBtn("홈", "home()"), "단어장", "");
+  const days = chapterDays().filter(d => d.items.length);
+  const day = days.find(d => d.name === db.wordsDay) || days.find(d => db.picked.includes(d.name)) || days[0];
+  if (!day) return render(head + `<div class="group" style="margin-top:20px"><div class="cell"><span class="detail">이 챕터에는 아직 단어가 없어요.</span></div></div>`);
+  wDay = day.name;
+  const mixed = wordsOrder && wordsOrder.day === day.name;
+  wItems = mixed ? wordsOrder.keys.map(k => day.items.find(i => keyOf(i) === k)).filter(Boolean) : day.items.slice();
+  const hide = !!db.hideMeaning;
+  render(navbar(backBtn("홈", "home()"), "단어장", textBtn(mixed ? "순서대로" : "섞기", "shuffleWords()")) + `
+    <div class="group" style="margin-top:20px">
+      <label class="cell"><span class="grow">Day</span>
+        <select style="flex:none;width:auto" onchange="pickWordsDay(this.value)">
+          ${days.map(d => `<option value="${esc(d.name)}" ${d === day ? "selected" : ""}>${esc(d.name)}</option>`).join("")}
+        </select>${ICON.chev}</label>
+    </div>
+    <div class="seg"><button class="${hide ? "" : "on"}" onclick="setHide(false)">뜻 보기</button><button class="${hide ? "on" : ""}" onclick="setHide(true)">뜻 가리기</button></div>
+    <div class="sf">${hide ? "단어를 누르면 뜻이 보여요." : `단어 ${wItems.length}개`}</div>
+    <div class="group ${hide ? "hide-m" : ""}" style="margin-top:8px">${wItems.map((it, i) => `
+      <div class="cell wrow" onclick="this.classList.toggle('show')">
+        <button class="spk" aria-label="발음 듣기" onclick="event.stopPropagation();say(wItems[${i}].word)">${ICON.speaker}</button>
+        <span class="grow two"><div class="w">${esc(it.word)}</div><div class="m">${esc(it.meaning)}</div></span>
+        ${starHTML(it, `event.stopPropagation();starWord(this,${i})`).replace('class="star', 'style="margin:0" class="star')}
+      </div>`).join("")}
+    </div>`);
+}
+function pickWordsDay(name) { db.wordsDay = name; wordsOrder = null; saveLocal(); window.scrollTo(0, 0); lastRendered = null; wordsScreen(); }
+function setHide(v) { db.hideMeaning = v; saveLocal(); wordsScreen(); }
+function shuffleWords() {
+  const day = chapterDays().find(d => d.name === wDay);
+  if (!day) return;
+  wordsOrder = wordsOrder && wordsOrder.day === day.name ? null : { day: day.name, keys: shuffle(day.items).map(keyOf) };
+  wordsScreen();
+}
+function starWord(el, i) { const it = wItems[i]; const on = !isMarked(it); setMark(it, on); el.classList.toggle("on", on); }
 
 /* ---------- 챕터 고르기 ---------- */
 function chapterScreen() {
@@ -433,8 +505,15 @@ function pickChapter(i) {
 }
 function toggleDay(i) {
   const n = db.days[i].name;
-  db.picked = db.picked.includes(n) ? db.picked.filter(x => x !== n) : db.picked.concat(n);
-  save(); home();
+  const on = !db.picked.includes(n);
+  db.picked = on ? db.picked.concat(n) : db.picked.filter(x => x !== n);
+  save();
+  const chk = document.querySelector(`[data-day="${i}"] .check`);
+  if (screen !== home || !chk) return home();
+  chk.classList.toggle("off", !on);
+  $("#countNote").textContent = countNote();
+  const has = pickedItems().length > 0;
+  document.querySelectorAll(".step-row").forEach(b => { b.disabled = !has; });
 }
 function pickedItems() {
   return chapterDays().filter(d => db.picked.includes(d.name)).flatMap(d => d.items.filter(it => it.sentence));
