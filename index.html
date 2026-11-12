@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -43,7 +43,9 @@
   button, input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
   button { cursor: pointer; }
   /* 아이폰 「두 번 탭 확대」 대기 없애기 → 연타해도 바로 반응 */
-  html, button, input, select, label, .cell { touch-action: manipulation; }
+  * { touch-action: manipulation; }
+  /* 글자 칸은 16px 이상이어야 아이폰이 눌렀을 때 확대하지 않음 */
+  input, textarea, select { font-size: max(16px, 1em) !important; }
   .wrap { max-width: 600px; margin: 0 auto; padding: 0 16px calc(40px + env(safe-area-inset-bottom)); }
   .hide { display: none !important; }
   .grow { flex: 1; min-width: 0; }
@@ -372,6 +374,7 @@ function stepRows(fn, total) {
 }
 function home() {
   S = null; screen = home;
+  if (typeof updateWaiting !== "undefined" && updateWaiting) setTimeout(applyUpdateIfIdle, 0);
   const total = pickedItems().length;
   const m = markedItems().length;
   render(navbar("", "", textBtn("단어 추가", "manage()"), false) + `
@@ -966,7 +969,32 @@ function installRow() {
 async function installApp() { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; home(); }
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js");
 
-load(); home(); syncNow();
+/* ---------- 새 버전이 올라오면 저절로 새로고침 ---------- */
+// 앱 파일 두 개의 지문을 기억해 두고, 다시 볼 때 달라졌으면 새로고침 (공부 중엔 끝난 뒤에)
+let verSig = null, updateWaiting = false;
+async function siteSig() {
+  const texts = await Promise.all(["index.html", "words.js"].map(u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.text() : Promise.reject())));
+  let h = 5381; const s = texts.join("\u0000");
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return s.length + ":" + h;
+}
+async function checkUpdate() {
+  if (location.protocol === "file:" || navigator.onLine === false) return;
+  try {
+    const sig = await siteSig();
+    if (!verSig) { verSig = sig; return; }
+    if (sig !== verSig) updateWaiting = true;
+  } catch (e) { return; }
+  applyUpdateIfIdle();
+}
+function applyUpdateIfIdle() {
+  const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (updateWaiting && !S && !typing && !$("#alert")) location.reload();
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
+setInterval(() => { if (document.visibilityState === "visible") checkUpdate(); }, 5 * 60 * 1000);
+
+load(); home(); syncNow(); checkUpdate();
 </script>
 </body>
 </html>
