@@ -171,6 +171,7 @@ const ICON = {
   book: `<svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4.5 9.5 4.6 12 6.2c2.5-1.6 5.5-1.7 8-.7v13c-2.5-1-5.5-.9-8 .7-2.5-1.6-5.5-1.7-8-.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 6.2v13" stroke="currentColor" stroke-width="1.8"/></svg>`,
   list: `<svg viewBox="0 0 24 24"><circle cx="5" cy="6.5" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="5" cy="17.5" r="1.5" fill="currentColor"/><path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
   pencil: `<svg viewBox="0 0 24 24"><path d="M5 19l1-4L16 5l3 3L9 18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+  sync: `<svg viewBox="0 0 24 24"><path d="M19 8.5A7.5 7.5 0 005.6 6.6M5 15.5a7.5 7.5 0 0013.4 1.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19.2 3.8v4.7h-4.7M4.8 20.2v-4.7h4.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 
 /* ---------- 저장 ---------- */
@@ -180,11 +181,16 @@ const keyOf = it => it.word.toLowerCase() + "||" + it.sentence;
 
 function load() {
   try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; }
+  normalize();
+  mergeWords();
+  saveLocal();
+}
+function normalize() {
   if (!db || !Array.isArray(db.days)) db = { days: [], count: 10, picked: ["Day 1"], seen: [] };
   if (!db.marked) db.marked = [];
+  if (!db.picked) db.picked = [];
+  if (!db.count) db.count = 10;
   if (!db.seen) db.seen = db.days.flatMap(d => d.items.map(it => d.name + "||" + it.word.toLowerCase()));
-  mergeWords();
-  save();
 }
 // words.js 에 새로 생긴 단어만 앱에 넣기 (앱에서 지운 건 다시 안 넣음)
 function mergeWords() {
@@ -199,7 +205,9 @@ function mergeWords() {
     }
   }
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+// 사용자가 뭔가 바꿨을 때: 이 기기에 저장 + 다른 기기로 보내기
+function save() { db.updatedAt = Date.now(); saveLocal(); schedulePush(); }
 function toItem(a) {
   return { word: a[0].trim(), meaning: (a[1] || "").trim(), sentence: (a[2] || "").trim(),
            translation: (a[3] || "").trim(), chunk: (a[4] || "").trim() || guessChunk(a[1], a[3]) };
@@ -239,6 +247,7 @@ function markTranslation(it, blank) {
 }
 
 /* ---------- 화면 틀 ---------- */
+let screen = null; // 지금 보고 있는 목록 화면 (다른 기기 기록이 오면 다시 그림)
 function navbar(left, title, right, line = true) {
   return `<nav class="nav ${line ? "line" : ""}"><div class="nl">${left || ""}</div><div class="nt">${title || ""}</div><div class="nr">${right || ""}</div></nav>`;
 }
@@ -299,7 +308,7 @@ function stepRows(fn, total) {
     </button>`).join("") + `</div>`;
 }
 function home() {
-  S = null;
+  S = null; screen = home;
   const total = pickedItems().length;
   const m = markedItems().length;
   render(navbar("", "", textBtn("단어 추가", "manage()"), false) + `
@@ -331,6 +340,14 @@ function home() {
       </button>
     </div>
     <div class="sf">틀리거나 별표한 단어가 여기에 모여요.</div>
+
+    <div class="group" style="margin-top:30px">
+      <button class="cell ico" onclick="syncScreen()">
+        <span class="ic" style="background:var(--green)">${ICON.sync}</span>
+        <span class="grow">기기 동기화</span><span class="detail">${sync.code ? "켬" : "끔"}</span>${ICON.chev}
+      </button>
+    </div>
+    <div class="sf">${sync.code ? "폰 · 아이패드 · 노트북 기록이 같이 맞춰지고 있어요." : "켜면 폰 · 아이패드 · 노트북 기록이 같이 맞춰져요."}</div>
     ${installRow()}`);
 }
 function setCount(d) { db.count = Math.max(1, Math.min(200, db.count + d)); save(); home(); }
@@ -345,7 +362,7 @@ function pickedItems() {
 
 /* ---------- 별표 단어 ---------- */
 function notes() {
-  S = null;
+  S = null; screen = notes;
   const list = markedItems();
   render(navbar(backBtn("홈", "home()"), "별표 단어", "") + `
     <div class="sh">학습</div>
@@ -549,6 +566,7 @@ function finish() {
 /* ---------- 단어 추가 ---------- */
 let curDay = 0;
 function manage() {
+  S = null; screen = manage;
   if (!db.days.length) db.days.push({ name: "Day 1", items: [] });
   if (curDay >= db.days.length) curDay = 0;
   const d = db.days[curDay];
@@ -643,6 +661,110 @@ function importData(input) {
   });
 }
 
+/* ---------- 기기 동기화 (무료 Firestore, 긴 코드 하나로) ---------- */
+const SYNC_URL = "https://firestore.googleapis.com/v1/projects/toeic-words-abb91/databases/(default)/documents/sync/";
+const SKEY = "toeic-words-sync";
+let sync = (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } })();
+function saveSync() { try { localStorage.setItem(SKEY, JSON.stringify(sync)); } catch (e) {} }
+function newCode() {
+  const A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint32Array(24));
+  let s = ""; for (let i = 0; i < 24; i++) { if (i && i % 4 === 0) s += "-"; s += A[r[i] % A.length]; } return s;
+}
+const timeout = () => (window.AbortSignal && AbortSignal.timeout) ? AbortSignal.timeout(15000) : undefined;
+const cleanCode = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/(.{4})(?=.)/g, "$1-");
+async function remoteGet(code) {
+  const r = await fetch(SYNC_URL + code, { cache: "no-store", signal: timeout() });
+  if (r.status === 404 || r.status === 403) return null;
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  return { data: JSON.parse(j.fields.data.stringValue), updatedAt: +j.fields.updatedAt.integerValue };
+}
+async function remotePut(code) {
+  const body = JSON.stringify({ fields: {
+    data: { stringValue: JSON.stringify(db) },
+    updatedAt: { integerValue: String(db.updatedAt || 0) },
+    device: { stringValue: isIOS() ? "iOS" : (navigator.userAgentData && navigator.userAgentData.platform) || "web" } } });
+  const r = await fetch(SYNC_URL + code, { method: "PATCH", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60000, signal: timeout() });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+}
+let pushTimer = null, syncing = false, again = false;
+function schedulePush() { if (!sync.code) return; clearTimeout(pushTimer); pushTimer = setTimeout(syncNow, 800); }
+// 더 최근에 바뀐 쪽을 따라감
+async function syncNow() {
+  if (!sync.code) return;
+  if (syncing) { again = true; return; }
+  syncing = true;
+  try {
+    const remote = await remoteGet(sync.code);
+    const mine = db.updatedAt || 0;
+    if (remote && remote.updatedAt > mine) applyRemote(remote.data);
+    else if (!remote || remote.updatedAt < mine) await remotePut(sync.code);
+    sync.last = Date.now(); sync.err = "";
+  } catch (e) { sync.err = navigator.onLine === false ? "인터넷 없음" : "연결 안 됨"; }
+  syncing = false; saveSync();
+  if (screen === syncScreen && !S) syncScreen();
+  if (again) { again = false; syncNow(); }
+}
+function applyRemote(data) {
+  db = data; normalize(); mergeWords(); saveLocal();
+  const typing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (!S && screen && !typing && !$("#alert")) screen();
+}
+async function startSync() {
+  sync = { code: newCode() }; saveSync();
+  db.updatedAt = Date.now(); saveLocal();
+  await syncNow(); syncScreen();
+}
+async function connectCode() {
+  const raw = prompt("다른 기기에 나온 동기화 코드를 넣어 주세요.");
+  if (!raw) return;
+  const code = cleanCode(raw);
+  if (code.replace(/-/g, "").length < 20) return alert("코드가 짧아요. 다시 확인해 주세요.");
+  try {
+    const remote = await remoteGet(code);
+    if (!remote) return alert("그 코드를 찾지 못했어요. 다시 확인해 주세요.");
+    if (!confirm("이 기기의 기록을 동기화된 기록으로 바꿀까요?")) return;
+    sync = { code, last: Date.now() }; saveSync();
+    applyRemote(remote.data); syncScreen();
+  } catch (e) { alert("인터넷 연결을 확인해 주세요."); }
+}
+function stopSync() {
+  if (!confirm("이 기기만 동기화를 끌까요? 다른 기기와 지금까지의 기록은 그대로예요.")) return;
+  sync = {}; saveSync(); syncScreen();
+}
+async function copyCode(btn) {
+  try { await navigator.clipboard.writeText(sync.code); btn.textContent = "복사했어요"; setTimeout(() => { btn.textContent = "코드 복사"; }, 1500); }
+  catch (e) { prompt("코드를 길게 눌러 복사하세요.", sync.code); }
+}
+const timeText = t => { const d = new Date(t); return d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); };
+function syncScreen() {
+  S = null; screen = syncScreen;
+  const head = navbar(backBtn("홈", "home()"), "기기 동기화", "");
+  if (!sync.code) return render(head + `
+    <div class="sh">처음 켜는 기기</div>
+    <div class="group"><button class="cell tint" onclick="startSync()">이 기기에서 동기화 시작</button></div>
+    <div class="sf">동기화 코드가 하나 생겨요. 그 코드를 다른 기기에 한 번만 넣으면 별표 · 단어 · 설정이 같이 맞춰져요. 로그인은 필요 없어요.</div>
+    <div class="sh">이미 켠 기기가 있으면</div>
+    <div class="group"><button class="cell tint" onclick="connectCode()">코드 입력해서 연결</button></div>
+    <div class="sf">이 기기의 기록은 동기화된 기록으로 바뀌어요.</div>`);
+  render(head + `
+    <div class="sh">동기화 코드</div>
+    <div class="group">
+      <div class="cell"><span class="grow" style="font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:16px;letter-spacing:.5px;user-select:all;-webkit-user-select:all;padding:11px 0">${esc(sync.code)}</span></div>
+      <button class="cell tint" onclick="copyCode(this)">코드 복사</button>
+    </div>
+    <div class="sf">다른 기기에서 이 앱을 열고 「기기 동기화 → 코드 입력해서 연결」에 이 코드를 넣으세요. 비밀번호처럼 남에게 보여 주지 마세요.</div>
+    <div class="group" style="margin-top:30px">
+      <div class="cell"><span class="grow">상태</span><span class="detail" style="color:${sync.err ? "var(--red)" : "var(--secondary)"}">${
+        sync.err ? esc(sync.err) : sync.last ? timeText(sync.last) + "에 맞춤" : "맞추는 중…"}</span></div>
+      <button class="cell tint" onclick="syncNow()">지금 맞추기</button>
+    </div>
+    <div class="group" style="margin-top:30px"><button class="cell danger center" onclick="stopSync()">이 기기 동기화 끄기</button></div>`);
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
+window.addEventListener("online", () => syncNow());
+setInterval(() => { if (document.visibilityState === "visible") syncNow(); }, 30000);
+
 /* ---------- 앱처럼 설치 ---------- */
 let installEvt = null;
 const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -662,7 +784,7 @@ function installRow() {
 async function installApp() { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; home(); }
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js");
 
-load(); home();
+load(); home(); syncNow();
 </script>
 </body>
 </html>
