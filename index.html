@@ -22,7 +22,7 @@
     --sep: rgba(60,60,67,.29); --fill: rgba(118,118,128,.12); --press: #D1D1D6;
     --tint: #007AFF; --green: #34C759; --red: #FF3B30; --orange: #FF9500; --yellow: #FFCC00; --indigo: #5856D6;
     --navbg: rgba(242,242,247,.8); --alertbg: rgba(242,242,242,.82);
-    --teal: #30B0C7; --segon: #FFFFFF;
+    --teal: #30B0C7; --segon: #FFFFFF; --switchoff: #E9E9EA;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -31,7 +31,7 @@
       --sep: rgba(84,84,88,.65); --fill: rgba(118,118,128,.24); --press: #3A3A3C;
       --tint: #0A84FF; --green: #30D158; --red: #FF453A; --orange: #FF9F0A; --yellow: #FFD60A; --indigo: #5E5CE6;
       --navbg: rgba(22,22,24,.8); --alertbg: rgba(44,44,46,.85);
-      --teal: #40C8E0; --segon: #636366;
+      --teal: #40C8E0; --segon: #636366; --switchoff: #39393D;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -127,6 +127,23 @@
   .star.on { color: var(--yellow); }
   .star.on path { fill: currentColor; }
   .star.on svg { transform: scale(1.06); }
+  .head-btns { display: flex; align-items: center; gap: 2px; margin: -4px -4px 0 auto; flex: none; }
+  .head-btns .star { margin: 0; }
+  .known { border: 0; background: none; padding: 4px; color: var(--tertiary); flex: none; }
+  .known svg { width: 24px; height: 24px; transition: transform .2s ease-out; }
+  .known circle, .known path { transition: fill .2s ease-out, stroke .2s ease-out; }
+  .known.on { color: var(--green); }
+  .known.on circle { fill: currentColor; }
+  .known.on path { stroke: #fff; }
+  .known.on svg { transform: scale(1.06); }
+  .wrow.is-known .w, .wrow.is-known .m { opacity: .45; }
+  /* iOS 스위치 */
+  .cell input.switch { -webkit-appearance: none; appearance: none; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 16px;
+    background: var(--switchoff); position: relative; cursor: pointer; transition: background .2s ease-out; }
+  .cell input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06); transition: transform .2s ease-out; }
+  .cell input.switch:checked { background: var(--green); }
+  .cell input.switch:checked::after { transform: translateX(20px); }
 
   .choice { padding: 11px 16px; line-height: 1.35; letter-spacing: -0.3px; font-size: 16px; }
   .choice .mark { width: 18px; height: 18px; flex: none; }
@@ -143,7 +160,7 @@
 
   /* 단어장 */
   .seg { display: flex; background: var(--fill); border-radius: 9px; padding: 2px; margin-top: 20px; }
-  .seg button { flex: 1; height: 30px; border: 0; border-radius: 7px; background: none; font-size: 13px; font-weight: 600; color: var(--label); transition: background .2s ease-out; }
+  .seg button { flex: 1; min-width: 0; padding: 0 4px; white-space: nowrap; height: 30px; border: 0; border-radius: 7px; background: none; font-size: 13px; font-weight: 600; color: var(--label); transition: background .2s ease-out; }
   .seg button.on { background: var(--segon); box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); }
   .wrow { cursor: pointer; }
   .wrow .w { font-weight: 600; letter-spacing: -0.2px; }
@@ -189,6 +206,8 @@ const ICON = {
   xC: `<svg class="mark" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="currentColor"/><path d="M6.5 6.5l7 7M13.5 6.5l-7 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`,
   star: `<svg viewBox="0 0 24 24"><path d="M12 3.4l2.62 5.32 5.88.86-4.25 4.14 1 5.85L12 16.8l-5.25 2.77 1-5.85L3.5 9.58l5.88-.86z"/></svg>`,
   starF: `<svg viewBox="0 0 24 24"><path d="M12 3.4l2.62 5.32 5.88.86-4.25 4.14 1 5.85L12 16.8l-5.25 2.77 1-5.85L3.5 9.58l5.88-.86z" fill="currentColor"/></svg>`,
+  knownC: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.8 12.3l2.8 2.8 5.6-5.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  play: `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>`,
   speaker: `<svg viewBox="0 0 24 24"><path d="M3.5 9.2h3.3L11.5 5v14l-4.7-4.2H3.5z" fill="currentColor"/><path d="M15 8.6a4.8 4.8 0 010 6.8M17.6 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   tortoise: `<svg viewBox="0 0 24 24"><path d="M3.5 9.2h3.3L11.5 5v14l-4.7-4.2H3.5z" fill="currentColor"/><path d="M15 9.5a3.5 3.5 0 010 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   book: `<svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4.5 9.5 4.6 12 6.2c2.5-1.6 5.5-1.7 8-.7v13c-2.5-1-5.5-.9-8 .7-2.5-1.6-5.5-1.7-8-.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 6.2v13" stroke="currentColor" stroke-width="1.8"/></svg>`,
@@ -219,6 +238,8 @@ function normalize() {
   if (!db.picked) db.picked = [];
   if (!db.count) db.count = 10;
   if (!db.removed) db.removed = [];
+  if (!db.known) db.known = [];
+  if (db.skipKnown === undefined) db.skipKnown = true;
   for (const d of db.days) if (!d.chapter) d.chapter = MY;
   if (!db.seen) db.seen = db.days.flatMap(d => d.items.map(it => d.name + "||" + it.word.toLowerCase()));
 }
@@ -324,8 +345,24 @@ const isMarked = it => db.marked.includes(keyOf(it));
 function setMark(it, on) {
   const k = keyOf(it);
   db.marked = db.marked.filter(x => x !== k);
-  if (on) db.marked.push(k);
+  if (on) { db.marked.push(k); db.known = db.known.filter(x => x !== k); } // 별표 = 아직 모름
   save();
+}
+/* ---------- 아는 단어 (✓) : 공부에서 빠짐 ---------- */
+const isKnown = it => db.known.includes(keyOf(it));
+function setKnown(it, on) {
+  const k = keyOf(it);
+  db.known = db.known.filter(x => x !== k);
+  if (on) { db.known.push(k); db.marked = db.marked.filter(x => x !== k); } // 알면 별표는 풀림
+  save();
+}
+function knownHTML(it, onclick = "toggleKnown(this)") {
+  return `<button class="known ${isKnown(it) ? "on" : ""}" aria-label="알아요" onclick="${onclick}">${ICON.knownC}</button>`;
+}
+function headBtns(it) { return `<span class="head-btns">${knownHTML(it)}${starHTML(it)}</span>`; }
+function toggleKnown(el) {
+  const it = S.list[S.i]; const on = !isKnown(it); setKnown(it, on);
+  el.classList.toggle("on", on); refreshStar(it);
 }
 function markedItems() {
   const map = new Map(allItems().map(it => [keyOf(it), it]));
@@ -336,9 +373,12 @@ function starHTML(it, onclick = "toggleStar(this)") {
 }
 function toggleStar(el) {
   const it = S.list[S.i]; const on = !isMarked(it); setMark(it, on);
-  el.classList.toggle("on", on);
+  el.classList.toggle("on", on); refreshStar(it);
 }
-function refreshStar(it) { const f = $(".card .star"); if (f) f.classList.toggle("on", isMarked(it)); }
+function refreshStar(it) {
+  const f = $(".card .star"); if (f) f.classList.toggle("on", isMarked(it));
+  const k = $(".card .known"); if (k) k.classList.toggle("on", isKnown(it));
+}
 
 /* ---------- 발음 ---------- */
 let voice = null;
@@ -379,6 +419,7 @@ function home() {
   const m = markedItems().length;
   render(navbar("", "", textBtn("단어 추가", "manage()"), false) + `
     <h1 class="large">TOEIC Words</h1>
+    ${resumeRow()}
 
     <div class="group" style="margin-top:20px">
       <button class="cell ico" onclick="chapterScreen()">
@@ -402,6 +443,13 @@ function home() {
           onfocus="this.select()" onchange="setCountTo(this.value)" onkeydown="if(event.key==='Enter')this.blur()"><span class="detail">개</span>
         <div class="stepper"><button onclick="setCount(-1)" aria-label="줄이기">−</button><i></i><button onclick="setCount(1)" aria-label="늘리기">+</button></div>
       </div>
+    </div>
+    <div class="group" style="margin-top:20px">
+      <label class="cell ico">
+        <span class="ic" style="background:var(--green)">${ICON.check.replace("<svg", '<svg style="width:15px;height:13px"')}</span>
+        <span class="grow">아는 단어 빼고 공부</span>
+        <input type="checkbox" class="switch" ${db.skipKnown ? "checked" : ""} onchange="setSkipKnown(this.checked)">
+      </label>
     </div>
     <div class="sf" id="countNote">${countNote()}</div>
 
@@ -440,7 +488,16 @@ function setCountTo(v) {
   if (screen !== home || !inp || !note) return home();
   inp.value = db.count; note.textContent = countNote();
 }
-function countNote() { const t = pickedItems().length; return `고른 단어 ${t}개 중 ${Math.min(db.count, t)}개를 공부해요.`; }
+function countNote() {
+  const t = pickedItems().length, k = db.skipKnown ? pickedAll().length - t : 0;
+  return `공부할 단어 ${t}개 중 ${Math.min(db.count, t)}개를 해요.` + (k ? ` 아는 단어 ${k}개는 뺐어요.` : "");
+}
+function setSkipKnown(on) {
+  db.skipKnown = on; save();
+  $("#countNote").textContent = countNote();
+  const has = pickedItems().length > 0;
+  document.querySelectorAll(".step-row").forEach(b => { b.disabled = !has; });
+}
 
 /* ---------- 단어장 (단어 + 뜻만) ---------- */
 let wordsOrder = null, wItems = [], wDay = null;
@@ -453,6 +510,10 @@ function wordsScreen() {
   wDay = day.name;
   const mixed = wordsOrder && wordsOrder.day === day.name;
   wItems = mixed ? wordsOrder.keys.map(k => day.items.find(i => keyOf(i) === k)).filter(Boolean) : day.items.slice();
+  const filter = db.wordsFilter || "all";
+  const nKnown = day.items.filter(isKnown).length;
+  if (filter === "unknown") wItems = wItems.filter(it => !isKnown(it));
+  if (filter === "known") wItems = wItems.filter(isKnown);
   const hide = !!db.hideMeaning;
   render(navbar(backBtn("홈", "home()"), "단어장", textBtn(mixed ? "순서대로" : "섞기", "shuffleWords()")) + `
     <div class="group" style="margin-top:20px">
@@ -461,14 +522,16 @@ function wordsScreen() {
           ${days.map(d => `<option value="${esc(d.name)}" ${d === day ? "selected" : ""}>${esc(d.name)}</option>`).join("")}
         </select>${ICON.chev}</label>
     </div>
-    <div class="seg"><button class="${hide ? "" : "on"}" onclick="setHide(false)">뜻 보기</button><button class="${hide ? "on" : ""}" onclick="setHide(true)">뜻 가리기</button></div>
-    <div class="sf">${hide ? "단어를 누르면 뜻이 보여요." : `단어 ${wItems.length}개`}</div>
+    <div class="seg"><button class="${filter === "all" ? "on" : ""}" onclick="setWordsFilter('all')">전체 ${day.items.length}</button><button class="${filter === "unknown" ? "on" : ""}" onclick="setWordsFilter('unknown')">모르는 단어 ${day.items.length - nKnown}</button><button class="${filter === "known" ? "on" : ""}" onclick="setWordsFilter('known')">아는 단어 ${nKnown}</button></div>
+    <div class="seg" style="margin-top:8px"><button class="${hide ? "" : "on"}" onclick="setHide(false)">뜻 보기</button><button class="${hide ? "on" : ""}" onclick="setHide(true)">뜻 가리기</button></div>
+    <div class="sf">${hide ? "단어를 누르면 뜻이 보여요. " : ""}✓를 누르면 아는 단어가 되어 공부에서 빠져요.</div>
     <div class="group ${hide ? "hide-m" : ""}" style="margin-top:8px">${wItems.map((it, i) => `
-      <div class="cell wrow" onclick="this.classList.toggle('show')">
+      <div class="cell wrow ${isKnown(it) ? "is-known" : ""}" onclick="this.classList.toggle('show')">
         <button class="spk" aria-label="발음 듣기" onclick="event.stopPropagation();say(wItems[${i}].word)">${ICON.speaker}</button>
         <span class="grow two"><div class="w">${esc(it.word)}</div><div class="m">${esc(it.meaning)}</div></span>
+        ${knownHTML(it, `event.stopPropagation();knownWord(this,${i})`)}
         ${starHTML(it, `event.stopPropagation();starWord(this,${i})`).replace('class="star', 'style="margin:0" class="star')}
-      </div>`).join("")}
+      </div>`).join("") || `<div class="cell"><span class="detail">${filter === "known" ? "아직 아는 단어로 표시한 게 없어요." : "모두 아는 단어예요."}</span></div>`}
     </div>`);
 }
 function pickWordsDay(name) { db.wordsDay = name; wordsOrder = null; saveLocal(); window.scrollTo(0, 0); lastRendered = null; wordsScreen(); }
@@ -479,7 +542,15 @@ function shuffleWords() {
   wordsOrder = wordsOrder && wordsOrder.day === day.name ? null : { day: day.name, keys: shuffle(day.items).map(keyOf) };
   wordsScreen();
 }
-function starWord(el, i) { const it = wItems[i]; const on = !isMarked(it); setMark(it, on); el.classList.toggle("on", on); }
+function syncRow(el, it) {
+  const row = el.closest(".wrow");
+  row.classList.toggle("is-known", isKnown(it));
+  row.querySelector(".known").classList.toggle("on", isKnown(it));
+  row.querySelector(".star").classList.toggle("on", isMarked(it));
+}
+function starWord(el, i) { const it = wItems[i]; setMark(it, !isMarked(it)); syncRow(el, it); }
+function knownWord(el, i) { const it = wItems[i]; setKnown(it, !isKnown(it)); syncRow(el, it); }
+function setWordsFilter(f) { db.wordsFilter = f; saveLocal(); wordsScreen(); }
 
 /* ---------- 챕터 고르기 ---------- */
 function chapterScreen() {
@@ -518,9 +589,11 @@ function toggleDay(i) {
   const has = pickedItems().length > 0;
   document.querySelectorAll(".step-row").forEach(b => { b.disabled = !has; });
 }
-function pickedItems() {
+function pickedAll() {
   return chapterDays().filter(d => db.picked.includes(d.name)).flatMap(d => d.items.filter(it => it.sentence));
 }
+// 공부할 단어: 고른 Day 에서 (스위치가 켜져 있으면) 아는 단어 빼고
+function pickedItems() { return pickedAll().filter(it => !(db.skipKnown && isKnown(it))); }
 
 /* ---------- 별표 단어 ---------- */
 function notes() {
@@ -560,22 +633,54 @@ function studyBar() {
   return navbar(textBtn("닫기", "back()"), `Step ${S.step}`, `<span class="bar-txt">${S.i + 1} / ${n}</span>`, false) +
     `<div class="progress"><div style="width:${((S.i + 1) / n) * 100}%"></div></div>`;
 }
+/* ---------- 이어서 하기: 공부 중인 자리를 이 기기에 저장 ---------- */
+const SESS = "toeic-words-session";
+function saveSession() {
+  if (!S) return;
+  try { localStorage.setItem(SESS, JSON.stringify({ step: S.step, keys: S.list.map(keyOf), i: S.i, wrong: S.wrong.map(keyOf), fromNotes: S.fromNotes, at: Date.now() })); } catch (e) {}
+}
+function loadSession() { try { return JSON.parse(localStorage.getItem(SESS)); } catch (e) { return null; } }
+function clearSession() { try { localStorage.removeItem(SESS); } catch (e) {} }
+function resume() {
+  const s = loadSession(); if (!s) return home();
+  const map = new Map(allItems().map(it => [keyOf(it), it]));
+  const list = s.keys.map(k => map.get(k)).filter(Boolean);
+  if (!list.length) { clearSession(); return home(); }
+  S = { step: s.step, list, i: Math.min(s.i, list.length - 1), wrong: s.wrong.map(k => map.get(k)).filter(Boolean), answered: false, fromNotes: s.fromNotes };
+  show();
+}
+function dropSession() { clearSession(); home(); }
+function resumeRow() {
+  const s = loadSession();
+  if (!s || !s.keys || s.i >= s.keys.length) return "";
+  const d = new Date(s.at), today = new Date().toDateString() === d.toDateString();
+  const when = (today ? "오늘 " : `${d.getMonth() + 1}월 ${d.getDate()}일 `) + timeText(s.at);
+  return `<div class="group" style="margin-top:16px">
+      <button class="cell ico" onclick="resume()">
+        <span class="ic" style="background:var(--tint)">${ICON.play}</span>
+        <span class="grow two"><div>이어서 하기</div><div class="sub">Step ${s.step} · ${s.i + 1} / ${s.keys.length} · ${when}에 멈춤</div></span>${ICON.chev}
+      </button>
+      <button class="cell danger" style="--inset:57px;font-size:15px" onclick="dropSession()">지우기</button>
+    </div>`;
+}
+
 function show() {
-  if (S.i >= S.list.length) return finish();
+  if (S.i >= S.list.length) { clearSession(); return finish(); }
+  saveSession();
   S.answered = false;
   const it = S.list[S.i];
   if (S.step === 1) step1(it); else if (S.step === 2) step2(it); else step3(it);
 }
 function next() { S.i++; show(); }
 function prev() { if (S.i > 0) { S.i--; show(); } }
-function missed(it) { if (!S.wrong.includes(it)) S.wrong.push(it); setMark(it, true); }
+function missed(it) { if (!S.wrong.includes(it)) S.wrong.push(it); setMark(it, true); saveSession(); }
 const listenPill = (rate, label, icon = ICON.speaker) =>
   `<button class="pill" onclick="say(S.list[S.i].${label === "단어" ? "word" : "sentence"}${rate ? ", " + rate : ""})">${icon}${label}</button>`;
 
 function step1(it) {
   render(studyBar() + `
     <div class="card">
-      <div class="card-head"><div class="grow"><p class="word">${esc(it.word)}</p><p class="meaning">${esc(it.meaning)}</p></div>${starHTML(it)}</div>
+      <div class="card-head"><div class="grow"><p class="word">${esc(it.word)}</p><p class="meaning">${esc(it.meaning)}</p></div>${headBtns(it)}</div>
       <div class="hr"></div>
       <p class="sent">${markSentence(it)}</p>
       <p class="trans">${markTranslation(it)}</p>
@@ -622,7 +727,7 @@ function step2(it) {
   S.opts = shuffle([it.translation, ...distractors(it)]);
   render(studyBar() + `
     <div class="card">
-      <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${starHTML(it)}</div>
+      <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
       <div class="pills">${listenPill(0, "예문")}</div>
     </div>
     <div class="sh">알맞은 해석</div>
@@ -682,7 +787,7 @@ function grade(it, input) {
 function step3(it) {
   render(studyBar() + `
     <div class="card">
-      <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${starHTML(it)}</div>
+      <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
       <p class="trans">${hasChunk(it) ? markTranslation(it, true) : "밑줄 친 단어의 뜻을 써 보세요."}</p>
       <div class="pills">${listenPill(0, "예문")}</div>
     </div>
@@ -748,21 +853,35 @@ function finish() {
 }
 
 /* ---------- 단어 추가 ---------- */
-let curDay = 0;
+let curDay = 0, mChapter = null;
 function manage() {
   S = null; screen = manage;
-  if (!db.days.length) db.days.push({ name: "Day 1", items: [] });
-  if (curDay >= db.days.length) curDay = 0;
+  if (!db.days.length) db.days.push({ name: "Day 1", chapter: MY, items: [] });
+  const chs = chapters();
+  if (!chs.includes(mChapter)) mChapter = curChapter();
+  // 고른 챕터 안의 Day 만
+  if (!db.days[curDay] || db.days[curDay].chapter !== mChapter) curDay = db.days.findIndex(x => x.chapter === mChapter);
   const d = db.days[curDay];
   const field = (id, lab, ph, extra = "") => `<div class="cell"><span class="lab">${lab}</span><input type="text" id="${id}" placeholder="${esc(ph)}" ${extra}></div>`;
   render(navbar(backBtn("홈", "home()"), "단어 추가", "") + `
-    <div class="group" style="margin-top:20px">
+    <div class="sh">챕터</div>
+    <div class="group">
+      <label class="cell"><span class="grow">챕터</span>
+        <select style="flex:none;width:auto;max-width:60%" onchange="pickManageChapter(this.value)">
+          ${chs.map((c, i) => `<option value="${i}" ${c === mChapter ? "selected" : ""}>${esc(c)}</option>`).join("")}
+        </select>${ICON.chev}</label>
+      <button class="cell tint" onclick="addChapter()">새 챕터 만들기</button>
+    </div>
+
+    <div class="sh">Day</div>
+    <div class="group">
       <label class="cell"><span class="grow">Day</span>
-        <select style="flex:none;width:auto" onchange="curDay=+this.value;manage()">
-          ${db.days.map((x, i) => `<option value="${i}" ${i === curDay ? "selected" : ""}>${esc(x.name)}</option>`).join("")}
+        <select style="flex:none;width:auto;max-width:60%" onchange="curDay=+this.value;manage()">
+          ${db.days.map((x, i) => x.chapter === mChapter ? `<option value="${i}" ${i === curDay ? "selected" : ""}>${esc(x.name)}</option>` : "").join("")}
         </select>${ICON.chev}</label>
       <button class="cell tint" onclick="addDay()">새 Day 만들기</button>
     </div>
+    <div class="sf">「${esc(mChapter)}」 챕터에 넣어요.</div>
 
     <div class="sh">하나씩</div>
     <div class="group">
@@ -797,10 +916,21 @@ function manage() {
       <button class="cell danger center" onclick="delDay()">${esc(d.name)} 삭제</button>
     </div>`);
 }
-function addDay() {
-  const name = prompt("새 Day 이름", "Day " + (db.days.length + 1));
+function pickManageChapter(i) { mChapter = chapters()[+i]; curDay = -1; manage(); }
+function addChapter() {
+  const ch = (prompt("새 챕터 이름 (예: 기초 단어)") || "").trim();
+  if (!ch) return;
+  if (chapters().includes(ch)) { mChapter = ch; return manage(); }
+  const name = (prompt("이 챕터의 첫 Day 이름", "Day 1") || "").trim();
   if (!name) return;
-  const ch = curChapter() || MY;
+  db.days.push({ name, chapter: ch, items: [] });
+  mChapter = ch; curDay = db.days.length - 1; save(); manage();
+}
+function addDay() {
+  const ch = mChapter || curChapter() || MY;
+  const name = prompt(`「${ch}」에 만들 새 Day 이름`, "Day " + (db.days.filter(x => x.chapter === ch).length + 1));
+  if (!name || !name.trim()) return;
+  if (db.days.some(x => x.name === name.trim())) return alert("같은 이름의 Day가 이미 있어요.");
   db.days.push({ name: name.trim(), chapter: ch, items: [] }); curDay = db.days.length - 1; save(); manage();
 }
 function renameDay() {
@@ -811,7 +941,7 @@ function renameDay() {
 function delDay() {
   const d = db.days[curDay];
   if (!confirm(`${d.name}와 안의 단어 ${d.items.length}개를 삭제할까요?`)) return;
-  db.days.splice(curDay, 1); db.picked = db.picked.filter(x => x !== d.name); curDay = 0; save(); manage();
+  db.days.splice(curDay, 1); db.picked = db.picked.filter(x => x !== d.name); curDay = -1; save(); manage();
 }
 function addOne() {
   const v = [0, 1, 2, 3, 4].map(i => $("#f" + i).value);
