@@ -157,6 +157,7 @@
   .fb { font-size: 15px; padding: 10px 16px 0; color: var(--secondary); min-height: 28px; }
   .fb b { color: var(--label); font-weight: 600; }
   .fb.ok { color: var(--green); font-weight: 600; }
+  .fb .ok-t { color: var(--green); font-weight: 600; }
 
   /* 단어장 */
   .seg { display: flex; background: var(--fill); border-radius: 9px; padding: 2px; margin-top: 20px; }
@@ -896,8 +897,9 @@ function choose(k) {
     else if (j === k) { b.classList.add("wrong"); b.insertAdjacentHTML("beforeend", ICON.xC); }
   });
   if (!ok) { missed(it); refreshStar(it); }
-  $("#fb").className = "fb" + (ok ? " ok" : "");
-  $("#fb").innerHTML = ok ? "정답이에요." : `<b>${esc(it.word)}</b> ${esc(it.meaning)}`;
+  // 맞혀도 틀려도 이 단어의 뜻을 한 번 더 보여 줌
+  $("#fb").className = "fb";
+  $("#fb").innerHTML = (ok ? `<span class="ok-t">정답이에요.</span> ` : "") + `<b>${esc(it.word)}</b> ${esc(it.meaning)}`;
   $("#nx").classList.remove("hide");
 }
 
