@@ -132,11 +132,15 @@
     font-family: "SF Pro Text", -apple-system, "Segoe UI", "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
     font-size: 15px; font-weight: 400; letter-spacing: 0; cursor: pointer; text-align: left; }
   .ipa:active { opacity: .4; }
-  .ipa.big { display: block; font-size: 17px; margin-top: 4px; color: var(--tint); }
+  .ipa .kor { color: var(--tint); font-family: -apple-system, "Apple SD Gothic Neo", Pretendard, sans-serif; letter-spacing: -0.2px; }
+  .ipa .kor b { font-weight: 800; }
+  .ipa .ipa-s { color: var(--tertiary); font-size: .8em; margin-left: 6px; }
+  .ipa.big { display: block; font-size: 19px; margin-top: 4px; }
   .ipa.small { font-size: 13px; margin-left: 4px; vertical-align: 1px; }
+  .ipa.small .ipa-s { display: none; }
   .wordline { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
   .wordline .wl { font-size: 15px; font-weight: 600; }
-  .wordline .ipa { color: var(--tint); }
+  .wordline .ipa { font-size: 16px; }
   .head-btns { display: flex; align-items: center; gap: 2px; margin: -4px -4px 0 auto; flex: none; }
   .head-btns .star { margin: 0; }
   .known { border: 0; background: none; padding: 4px; color: var(--tertiary); flex: none; }
@@ -263,6 +267,7 @@
 
 <script src="words.js"></script>
 <script src="pron.js"></script>
+<script src="kor.js"></script>
 <script>
 /* ---------- 아이콘 (SF Symbols 느낌) ---------- */
 const ICON = {
@@ -533,10 +538,14 @@ function pronOf(it) {
   const k = it.word.toLowerCase();
   return (typeof PRON !== "undefined" && PRON[k]) || pronCache[k] || "";
 }
+// 한글 발음: [ ] 안은 힘줘서 읽는 부분 → 굵게
+function korOf(it) { return (typeof KOR !== "undefined" && KOR[it.word.toLowerCase()]) || ""; }
+const korHTML = s => esc(s).replace(/\[(.+?)\]/g, "<b>$1</b>");
 function ipaHTML(it, cls = "ipa") {
-  const p = pronOf(it);
+  const p = pronOf(it), k = korOf(it);
   if (!p) fetchPron(it);
-  return `<button class="${cls}" data-w="${esc(it.word.toLowerCase())}" onclick="event.stopPropagation();say(${esc(JSON.stringify(it.word))})" aria-label="발음 듣기">${p ? "/" + esc(p) + "/" : ""}</button>`;
+  return `<button class="${cls}" data-w="${esc(it.word.toLowerCase())}" onclick="event.stopPropagation();say(${esc(JSON.stringify(it.word))})" aria-label="발음 듣기">${
+    k ? `<span class="kor">${korHTML(k)}</span>` : ""}<span class="ipa-s">${p ? "/" + esc(p) + "/" : ""}</span></button>`;
 }
 const pronAsked = new Set();
 async function fetchPron(it) {
@@ -554,7 +563,7 @@ async function fetchPron(it) {
     }));
     pronCache[k] = parts.join(" ");
     try { localStorage.setItem(PKEY, JSON.stringify(pronCache)); } catch (e) {}
-    document.querySelectorAll(`[data-w="${CSS.escape(k)}"]`).forEach(b => { b.textContent = "/" + pronCache[k] + "/"; });
+    document.querySelectorAll(`[data-w="${CSS.escape(k)}"] .ipa-s`).forEach(b => { b.textContent = "/" + pronCache[k] + "/"; });
   } catch (e) {}
 }
 
@@ -1443,7 +1452,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.ser
 // 앱 파일 두 개의 지문을 기억해 두고, 다시 볼 때 달라졌으면 새로고침 (공부 중엔 끝난 뒤에)
 let verSig = null, updateWaiting = false;
 async function siteSig() {
-  const texts = await Promise.all(["index.html", "words.js", "pron.js"].map(u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.text() : Promise.reject())));
+  const texts = await Promise.all(["index.html", "words.js", "pron.js", "kor.js"].map(u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.text() : Promise.reject())));
   let h = 5381; const s = texts.join("\u0000");
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
   return s.length + ":" + h;
