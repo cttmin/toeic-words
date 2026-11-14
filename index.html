@@ -127,6 +127,16 @@
   .star.on { color: var(--yellow); }
   .star.on path { fill: currentColor; }
   .star.on svg { transform: scale(1.06); }
+  /* 발음기호: 누르면 읽어 줌 */
+  .ipa { display: inline-block; border: 0; background: none; padding: 0; margin: 0; color: var(--secondary);
+    font-family: "SF Pro Text", -apple-system, "Segoe UI", "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
+    font-size: 15px; font-weight: 400; letter-spacing: 0; cursor: pointer; text-align: left; }
+  .ipa:active { opacity: .4; }
+  .ipa.big { display: block; font-size: 17px; margin-top: 4px; color: var(--tint); }
+  .ipa.small { font-size: 13px; margin-left: 4px; vertical-align: 1px; }
+  .wordline { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .wordline .wl { font-size: 15px; font-weight: 600; }
+  .wordline .ipa { color: var(--tint); }
   .head-btns { display: flex; align-items: center; gap: 2px; margin: -4px -4px 0 auto; flex: none; }
   .head-btns .star { margin: 0; }
   .known { border: 0; background: none; padding: 4px; color: var(--tertiary); flex: none; }
@@ -250,6 +260,7 @@
 <div class="wrap" id="app"></div>
 
 <script src="words.js"></script>
+<script src="pron.js"></script>
 <script>
 /* ---------- 아이콘 (SF Symbols 느낌) ---------- */
 const ICON = {
@@ -512,6 +523,39 @@ function refreshStar(it) {
   const k = $(".card .known"); if (k) k.classList.toggle("on", isKnown(it));
 }
 
+/* ---------- 발음기호 ---------- */
+// pron.js 에 없는 단어(앱에서 직접 넣은 단어)는 사전에서 받아 이 기기에 기억
+const PKEY = "toeic-words-pron";
+const pronCache = (() => { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch (e) { return {}; } })();
+function pronOf(it) {
+  const k = it.word.toLowerCase();
+  return (typeof PRON !== "undefined" && PRON[k]) || pronCache[k] || "";
+}
+function ipaHTML(it, cls = "ipa") {
+  const p = pronOf(it);
+  if (!p) fetchPron(it);
+  return `<button class="${cls}" data-w="${esc(it.word.toLowerCase())}" onclick="event.stopPropagation();say(${esc(JSON.stringify(it.word))})" aria-label="발음 듣기">${p ? "/" + esc(p) + "/" : ""}</button>`;
+}
+const pronAsked = new Set();
+async function fetchPron(it) {
+  const k = it.word.toLowerCase();
+  if (pronAsked.has(k) || navigator.onLine === false) return; pronAsked.add(k);
+  try {
+    const parts = await Promise.all(k.split(/\s+/).map(async t => {
+      const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(t), { signal: timeout() });
+      if (!r.ok) throw 0;
+      const j = await r.json();
+      const ph = j.flatMap(e => [...(e.phonetics || []), ...(e.phonetic ? [{ text: e.phonetic }] : [])]).filter(p => p.text);
+      const us = ph.find(p => /-us\.mp3$/.test(p.audio || "")) || ph[0];
+      if (!us) throw 0;
+      return us.text.replace(/[\/\[\]\.]/g, "").replace(/ɹ/g, "r").replace(/ɛ/g, "e").trim();
+    }));
+    pronCache[k] = parts.join(" ");
+    try { localStorage.setItem(PKEY, JSON.stringify(pronCache)); } catch (e) {}
+    document.querySelectorAll(`[data-w="${CSS.escape(k)}"]`).forEach(b => { b.textContent = "/" + pronCache[k] + "/"; });
+  } catch (e) {}
+}
+
 /* ---------- 발음 ---------- */
 let voice = null;
 function pickVoice() {
@@ -658,7 +702,7 @@ function wordsScreen() {
     <div class="group ${hide ? "hide-m" : ""}" style="margin-top:8px">${wItems.map((it, i) => `
       <div class="cell wrow ${isKnown(it) ? "is-known" : ""}" onclick="this.classList.toggle('show')">
         <button class="spk" aria-label="발음 듣기" onclick="event.stopPropagation();say(wItems[${i}].word)">${ICON.speaker}</button>
-        <span class="grow two"><div class="w">${esc(it.word)}</div><div class="m">${esc(it.meaning)}</div></span>
+        <span class="grow two"><div class="w">${esc(it.word)} ${ipaHTML(it, "ipa small")}</div><div class="m">${esc(it.meaning)}</div></span>
         ${knownHTML(it, `event.stopPropagation();knownWord(this,${i})`)}
         ${starHTML(it, `event.stopPropagation();starWord(this,${i})`).replace('class="star', 'style="margin:0" class="star')}
       </div>`).join("") || `<div class="cell"><span class="detail">${filter === "known" ? "아직 아는 단어로 표시한 게 없어요." : "모두 아는 단어예요."}</span></div>`}
@@ -834,7 +878,7 @@ const listenPill = (rate, label, icon = ICON.speaker) =>
 function step1(it) {
   render(studyBar() + `
     <div class="card">
-      <div class="card-head"><div class="grow"><p class="word">${esc(it.word)}</p><p class="meaning">${esc(it.meaning)}</p></div>${headBtns(it)}</div>
+      <div class="card-head"><div class="grow"><p class="word">${esc(it.word)}</p>${ipaHTML(it, "ipa big")}<p class="meaning">${esc(it.meaning)}</p></div>${headBtns(it)}</div>
       <div class="hr"></div>
       <p class="sent">${markSentence(it)}</p>
       <p class="trans">${markTranslation(it)}</p>
@@ -881,6 +925,7 @@ function step2(it) {
   S.opts = shuffle([it.translation, ...distractors(it)]);
   render(studyBar() + `
     <div class="card">
+      <div class="wordline"><span class="wl">${esc(it.word)}</span>${ipaHTML(it)}</div>
       <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
       <div class="pills">${listenPill(0, "예문")}</div>
     </div>
@@ -942,6 +987,7 @@ function grade(it, input) {
 function step3(it) {
   render(studyBar() + `
     <div class="card">
+      <div class="wordline"><span class="wl">${esc(it.word)}</span>${ipaHTML(it)}</div>
       <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
       <p class="trans">${hasChunk(it) ? markTranslation(it, true) : "밑줄 친 단어의 뜻을 써 보세요."}</p>
       <div class="pills">${listenPill(0, "예문")}</div>
@@ -1379,7 +1425,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.ser
 // 앱 파일 두 개의 지문을 기억해 두고, 다시 볼 때 달라졌으면 새로고침 (공부 중엔 끝난 뒤에)
 let verSig = null, updateWaiting = false;
 async function siteSig() {
-  const texts = await Promise.all(["index.html", "words.js"].map(u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.text() : Promise.reject())));
+  const texts = await Promise.all(["index.html", "words.js", "pron.js"].map(u => fetch(u, { cache: "no-cache" }).then(r => r.ok ? r.text() : Promise.reject())));
   let h = 5381; const s = texts.join("\u0000");
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
   return s.length + ":" + h;

@@ -3,8 +3,8 @@
   인터넷이 되면 항상 새 파일을 받아 오고(새 단어 바로 반영),
   안 되면 마지막으로 받아 둔 파일로 엽니다.
 */
-const CACHE = "toeic-words-v3";
-const SHELL = ["./", "index.html", "words.js", "manifest.webmanifest",
+const CACHE = "toeic-words-v4";
+const SHELL = ["./", "index.html", "words.js", "pron.js", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon.png"];
 
 self.addEventListener("install", e => {
