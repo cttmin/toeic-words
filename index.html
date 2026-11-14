@@ -1057,8 +1057,11 @@ function settle(ok) {
   const it = S.list[S.i];
   S.answered = true;
   if (!ok) { missed(it); refreshStar(it); }
-  $("#fb").className = "fb" + (ok ? " ok" : "");
-  $("#fb").innerHTML = ok ? "정답이에요." : `정답 <b>${esc(answerOf(it))}</b> · ${esc(it.meaning)}<br>${retryLink}`;
+  // 맞혀도 틀려도 이 단어의 뜻을 한 번 더 보여 줌 (STEP 2 와 같게)
+  $("#fb").className = "fb";
+  $("#fb").innerHTML = ok
+    ? `<span class="ok-t">정답이에요.</span> <b>${esc(it.word)}</b> ${esc(it.meaning)}`
+    : `정답 <b>${esc(answerOf(it))}</b> · <b>${esc(it.word)}</b> ${esc(it.meaning)}<br>${retryLink}`;
   $("#app .trans").innerHTML = markTranslation(it);
   $("#hint").classList.add("hide");
   $("#go").textContent = "다음";
