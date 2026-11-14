@@ -167,6 +167,8 @@
   .fb { font-size: 15px; padding: 10px 16px 0; color: var(--secondary); min-height: 28px; }
   .fb b { color: var(--label); font-weight: 600; }
   .fb.ok { color: var(--green); font-weight: 600; }
+  .linkbtn { border: 0; background: none; padding: 8px 0 0; color: var(--tint); font-size: 15px; font-weight: 400; }
+  .linkbtn:active { opacity: .4; }
   .fb .ok-t { color: var(--green); font-weight: 600; }
 
   /* 단어장 */
@@ -871,7 +873,25 @@ function show() {
 }
 function next() { S.i++; show(); }
 function prev() { if (S.i > 0) { S.i--; show(); } }
-function missed(it) { if (!S.wrong.includes(it)) S.wrong.push(it); setMark(it, true); saveSession(); }
+// 틀렸을 때: 원래 별표 · ✓ 상태를 기억해 두고 별표 (잘못 눌렀으면 되돌릴 수 있게)
+function missed(it) {
+  S.undo = S.undo || {};
+  if (!(S.i in S.undo)) S.undo[S.i] = { marked: isMarked(it), known: isKnown(it) };
+  if (!S.wrong.includes(it)) S.wrong.push(it);
+  setMark(it, true); saveSession();
+}
+// 이 카드의 답을 없던 일로: 틀림 목록에서 빼고 별표 · ✓ 를 원래대로
+function undoAnswer(i) {
+  const it = S.list[i], u = S.undo && S.undo[i];
+  S.wrong = S.wrong.filter(x => x !== it);
+  if (u) { setMark(it, u.marked); if (u.known) setKnown(it, true); delete S.undo[i]; }
+  saveSession();
+}
+function prevQ() { if (S.i > 0) { S.i--; undoAnswer(S.i); show(); } }
+function retryQ() { undoAnswer(S.i); show(); }
+const qNav = (main) => `<div class="btns">
+    <button class="btn gray" onclick="prevQ()" ${S.i ? "" : "disabled"} style="flex:0 0 32%">이전</button>${main}</div>`;
+const retryLink = `<button class="linkbtn" onclick="retryQ()">잘못 눌렀어요 · 다시 고르기</button>`;
 const listenPill = (rate, label, icon = ICON.speaker) =>
   `<button class="pill" onclick="say(S.list[S.i].${label === "단어" ? "word" : "sentence"}${rate ? ", " + rate : ""})">${icon}${label}</button>`;
 
@@ -932,7 +952,7 @@ function step2(it) {
     <div class="sh">알맞은 해석</div>
     <div class="group">${S.opts.map((o, k) => `<button class="cell choice" onclick="choose(${k})"><span class="grow">${esc(o)}</span></button>`).join("")}</div>
     <div class="fb" id="fb"></div>
-    <div class="btns"><button class="btn hide" id="nx" onclick="next()">다음</button></div>`);
+    ${qNav(`<button class="btn" id="nx" disabled onclick="next()">다음</button>`)}`);
 }
 function choose(k) {
   if (S.answered) return; S.answered = true;
@@ -944,8 +964,8 @@ function choose(k) {
   if (!ok) { missed(it); refreshStar(it); }
   // 맞혀도 틀려도 이 단어의 뜻을 한 번 더 보여 줌
   $("#fb").className = "fb";
-  $("#fb").innerHTML = (ok ? `<span class="ok-t">정답이에요.</span> ` : "") + `<b>${esc(it.word)}</b> ${esc(it.meaning)}`;
-  $("#nx").classList.remove("hide");
+  $("#fb").innerHTML = (ok ? `<span class="ok-t">정답이에요.</span> ` : "") + `<b>${esc(it.word)}</b> ${esc(it.meaning)}` + (ok ? "" : `<br>${retryLink}`);
+  $("#nx").disabled = false;
 }
 
 /* 채점: 맞음 · 비슷함(한 번 더 묻기) · 틀림 */
@@ -995,10 +1015,8 @@ function step3(it) {
     <div class="sh">빈칸 해석</div>
     <div class="group"><div class="cell"><input type="text" id="a" autocomplete="off" placeholder="여기에 쓰기" enterkeyhint="done"></div></div>
     <div class="fb" id="fb"></div>
-    <div class="btns">
-      <button class="btn gray" id="hint" onclick="hint()">힌트</button>
-      <button class="btn" id="go" onclick="check()">확인</button>
-    </div>`);
+    ${qNav(`<button class="btn gray" id="hint" onclick="hint()">힌트</button>
+      <button class="btn" id="go" onclick="check()">확인</button>`)}`);
   const a = $("#a"); a.focus();
   a.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) check(); });
 }
@@ -1031,7 +1049,7 @@ function settle(ok) {
   S.answered = true;
   if (!ok) { missed(it); refreshStar(it); }
   $("#fb").className = "fb" + (ok ? " ok" : "");
-  $("#fb").innerHTML = ok ? "정답이에요." : `정답 <b>${esc(answerOf(it))}</b> · ${esc(it.meaning)}`;
+  $("#fb").innerHTML = ok ? "정답이에요." : `정답 <b>${esc(answerOf(it))}</b> · ${esc(it.meaning)}<br>${retryLink}`;
   $("#app .trans").innerHTML = markTranslation(it);
   $("#hint").classList.add("hide");
   $("#go").textContent = "다음";
