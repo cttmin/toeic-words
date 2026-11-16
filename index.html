@@ -338,7 +338,13 @@ function mergeWords() {
     for (const a of d.items) {
       const k = d.day + "||" + a[0].trim().toLowerCase();
       if (db.seen.includes(k)) continue;
-      if (!day) { day = { name: d.day, orig: d.day, chapter: chName(d.chapter || MY), chapterOrig: d.chapter, items: [] }; db.days.push(day); }
+      if (!day) {
+        day = { name: d.day, orig: d.day, chapter: chName(d.chapter || MY), chapterOrig: d.chapter, items: [] };
+        // 새 Day 는 단어 파일 순서대로 끼워 넣음 (D01 이 D20 뒤로 가지 않게)
+        const order = WORDS.map(x => x.day), mine = order.indexOf(d.day);
+        const at = db.days.findIndex(x => order.indexOf(x.orig || x.name) > mine);
+        at < 0 ? db.days.push(day) : db.days.splice(at, 0, day);
+      }
       day.items.push(toItem(a)); db.seen.push(k);
     }
   }
