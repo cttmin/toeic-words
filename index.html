@@ -929,7 +929,7 @@ function step1(it) {
       <div class="hr"></div>
       <p class="sent">${markSentence(it)}</p>
       <p class="trans">${markTranslation(it)}</p>
-      <div class="pills">${listenPill(0, "단어")}${listenPill(0, "예문")}${listenPill(0.7, "천천히", ICON.tortoise)}</div>
+      <div class="pills">${listenPill(0, "단어")}${listenPill(0, "예문")}</div>
     </div>
     <div class="btns">
       <button class="btn gray" onclick="prev()" ${S.i ? "" : "disabled"}>이전</button>
@@ -974,12 +974,13 @@ function step2(it) {
     <div class="card">
       <div class="wordline"><span class="wl">${esc(it.word)}</span>${ipaHTML(it)}</div>
       <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
-      <div class="pills">${listenPill(0, "예문")}</div>
+      <div class="pills">${listenPill(0, "단어")}${listenPill(0, "예문")}</div>
     </div>
     <div class="sh">알맞은 해석</div>
     <div class="group">${S.opts.map((o, k) => `<button class="cell choice" onclick="choose(${k})"><span class="grow">${esc(o)}</span></button>`).join("")}</div>
     <div class="fb" id="fb"></div>
     ${qNav(`<button class="btn" id="nx" disabled onclick="next()">다음</button>`)}`);
+  say(it.sentence);
 }
 function choose(k) {
   if (S.answered) return; S.answered = true;
@@ -1037,13 +1038,14 @@ function step3(it) {
       <div class="wordline"><span class="wl">${esc(it.word)}</span>${ipaHTML(it)}</div>
       <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
       <p class="trans">${hasChunk(it) ? markTranslation(it, true) : "밑줄 친 단어의 뜻을 써 보세요."}</p>
-      <div class="pills">${listenPill(0, "예문")}</div>
+      <div class="pills">${listenPill(0, "단어")}${listenPill(0, "예문")}</div>
     </div>
     <div class="sh">빈칸 해석</div>
     <div class="group"><div class="cell"><input type="text" id="a" autocomplete="off" placeholder="여기에 쓰기" enterkeyhint="done"></div></div>
     <div class="fb" id="fb"></div>
     ${qNav(`<button class="btn gray" id="hint" onclick="hint()">힌트</button>
       <button class="btn" id="go" onclick="check()">확인</button>`)}`);
+  say(it.sentence);
   const a = $("#a"); a.focus();
   a.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) check(); });
 }
