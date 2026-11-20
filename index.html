@@ -596,10 +596,11 @@ const STEPS = [
   null,
   { en: "Read & Listen", ko: "예문 보고 듣기", color: "var(--tint)" },
   { en: "Choose", ko: "해석 4개 중 고르기", color: "var(--orange)" },
-  { en: "Fill in", ko: "빈칸 해석 쓰기", color: "var(--green)" },
+  { en: "Fill in", ko: "예문 보고 뜻 쓰기", color: "var(--green)" },
+  { en: "Word only", ko: "단어만 보고 뜻 쓰기", color: "var(--indigo)" },
 ];
 function stepRows(fn, total) {
-  return `<div class="group">` + [1, 2, 3].map(n => `
+  return `<div class="group">` + [1, 2, 3, 4].map(n => `
     <button class="cell ico step-row" ${total ? "" : "disabled"} onclick="${fn}(${n})">
       <span class="ic" style="background:${STEPS[n].color}">${n}</span>
       <span class="grow two"><div>${STEPS[n].en}</div><div class="sub">STEP ${n} · ${STEPS[n].ko}</div></span>
@@ -896,7 +897,7 @@ function show() {
   saveSession();
   S.answered = false;
   const it = S.list[S.i];
-  if (S.step === 1) step1(it); else if (S.step === 2) step2(it); else step3(it);
+  if (S.step === 1) step1(it); else if (S.step === 2) step2(it); else if (S.step === 4) step4(it); else step3(it);
 }
 function next() { S.i++; show(); }
 function prev() { if (S.i > 0) { S.i--; show(); } }
@@ -1037,20 +1038,42 @@ function step3(it) {
     <div class="card">
       <div class="wordline"><span class="wl">${esc(it.word)}</span>${ipaHTML(it)}</div>
       <div class="card-head"><p class="sent grow">${markSentence(it)}</p>${headBtns(it)}</div>
-      <p class="trans">${hasChunk(it) ? markTranslation(it, true) : "밑줄 친 단어의 뜻을 써 보세요."}</p>
       <div class="pills">${listenPill(0, "단어")}${listenPill(0, "예문")}</div>
     </div>
-    <div class="sh">빈칸 해석</div>
+    <div class="sh">밑줄 친 단어의 뜻</div>
     <div class="group"><div class="cell"><input type="text" id="a" autocomplete="off" placeholder="여기에 쓰기" enterkeyhint="done"></div></div>
     <div class="fb" id="fb"></div>
     ${qNav(`<button class="btn gray" id="hint" onclick="hint()">힌트</button>
       <button class="btn" id="go" onclick="check()">확인</button>`)}`);
   say(it.sentence);
+  bindAnswer();
+}
+function bindAnswer() {
   const a = $("#a"); a.focus();
   a.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) check(); });
 }
+// STEP 4: 예문 없이 단어만 보고 뜻 쓰기 (채점은 STEP 3 와 같음)
+function step4(it) {
+  render(studyBar() + `
+    <div class="card">
+      <div class="card-head"><div class="grow"><p class="word">${esc(it.word)}</p>${ipaHTML(it)}</div>${headBtns(it)}</div>
+      <div class="pills">${listenPill(0, "단어")}</div>
+    </div>
+    <div class="sh">단어의 뜻</div>
+    <div class="group"><div class="cell"><input type="text" id="a" autocomplete="off" placeholder="여기에 쓰기" enterkeyhint="done"></div></div>
+    <div class="fb" id="fb"></div>
+    ${qNav(`<button class="btn gray" id="hint" onclick="hint()">힌트</button>
+      <button class="btn" id="go" onclick="check()">확인</button>`)}`);
+  say(it.word);
+  bindAnswer();
+}
+// 정답으로 보여 줄 말: STEP 3 은 예문 속 뜻, STEP 4 는 뜻의 첫 낱말
+function shownAnswer(it) {
+  if (S.step !== 4) return answerOf(it);
+  return it.meaning.split(/[,;/]/)[0].trim() || it.meaning;
+}
 function hint() {
-  const ans = answerOf(S.list[S.i]);
+  const ans = shownAnswer(S.list[S.i]);
   $("#fb").className = "fb";
   $("#fb").textContent = "힌트 · " + ans[0] + " _".repeat(ans.length - 1);
 }
@@ -1064,7 +1087,7 @@ function check() {
     document.body.insertAdjacentHTML("beforeend", `
       <div class="alert-bg" id="alert"><div class="alert">
         <div class="at">비슷해요</div>
-        <div class="am">정답은 「${esc(answerOf(it))}」(${esc(it.meaning)})예요.<br>쓰신 답: ${esc(val)}</div>
+        <div class="am">정답은 「${esc(shownAnswer(it))}」(${esc(it.meaning)})예요.<br>쓰신 답: ${esc(val)}</div>
         <div class="ab"><button onclick="settle(false)">모르는 걸로</button><button class="b" onclick="settle(true)">맞은 걸로</button></div>
       </div></div>`);
     return;
@@ -1081,8 +1104,7 @@ function settle(ok) {
   $("#fb").className = "fb";
   $("#fb").innerHTML = ok
     ? `<span class="ok-t">정답이에요.</span> <b>${esc(it.word)}</b> ${esc(it.meaning)}`
-    : `정답 <b>${esc(answerOf(it))}</b> · <b>${esc(it.word)}</b> ${esc(it.meaning)}<br>${retryLink}`;
-  $("#app .trans").innerHTML = markTranslation(it);
+    : `정답 · <b>${esc(it.word)}</b> ${esc(it.meaning)}<br>${retryLink}`;
   $("#hint").classList.add("hide");
   $("#go").textContent = "다음";
 }
@@ -1098,7 +1120,7 @@ function finish() {
     </div>
     <div class="stack">
       ${w ? `<button class="btn" onclick="start(${S.step}, shuffle(S.wrong), S.fromNotes)">틀린 ${w}개 다시</button>` : ""}
-      ${S.step < 3 ? `<button class="btn ${w ? "gray" : ""}" onclick="start(${S.step + 1}, shuffle(S.list), S.fromNotes)">같은 단어로 Step ${S.step + 1}</button>` : ""}
+      ${S.step < 4 ? `<button class="btn ${w ? "gray" : ""}" onclick="start(${S.step + 1}, shuffle(S.list), S.fromNotes)">같은 단어로 Step ${S.step + 1}</button>` : ""}
       <button class="btn gray" onclick="start(${S.step}, shuffle(S.list), S.fromNotes)">한 번 더</button>
     </div>`);
 }
@@ -1213,7 +1235,7 @@ function wordSheet(k) {
     </div>
     <div class="sh">STEP 3 빈칸</div>
     <div class="group"><div class="cell"><input type="text" id="f4" placeholder="해석 속 단어 뜻   예: 제출" value="${esc(v[4])}"></div></div>
-    <div class="sf">비워 두면 뜻을 보고 알아서 찾아요. 뜻을 쉼표로 여러 개 적으면 STEP 3에서 모두 정답이 돼요.</div>
+    <div class="sf">비워 두면 뜻을 보고 알아서 찾아요. 뜻을 쉼표로 여러 개 적으면 STEP 3·4에서 모두 정답이 돼요.</div>
     ${it ? `<div class="group" style="margin-top:30px"><button class="cell danger center" onclick="closeSheet(true);delWordAt(${k})">단어 삭제</button></div>` : ""}
     <div class="sf" style="text-align:center;margin-top:16px">「${esc(d.name)}」에 ${it ? "있는 단어예요" : "들어가요"}.</div>`,
     () => saveWord(k));
